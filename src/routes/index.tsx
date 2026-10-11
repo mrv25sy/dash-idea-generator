@@ -1,21 +1,18 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useCatalogVersion } from "@/data/products";
+import { Hero } from "@/components/site/Hero";
+import { DropsSection, SinglesSection, BundlesSection, CommunitySection, CustomSections } from "@/components/site/Sections";
 
-import { Timer } from "@/components/timer";
+const title = "Vice — Street calls, we answer";
+const description = "Vice is a Syrian streetwear brand. Drops, singles and bundles, shipping to all Syrian governorates.";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Dash — Timer" },
-      {
-        name: "description",
-        content:
-          "Dash is a clean countdown timer: pick a preset, type any time, and let the ring run down.",
-      },
-      { property: "og:title", content: "Dash — Timer" },
-      {
-        property: "og:description",
-        content: "A clean countdown timer with presets, custom times, and a chime when it's up.",
-      },
+      { title },
+      { name: "description", content: description },
+      { property: "og:title", content: title },
+      { property: "og:description", content: description },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -24,9 +21,15 @@ export const Route = createFileRoute("/")({
 });
 
 function Index() {
+  const v = useCatalogVersion();
   return (
-    <main className="flex min-h-[calc(100svh-4.5rem)] items-center justify-center bg-background px-6 py-10">
-      <Timer />
-    </main>
+    <div key={v} className="contents">
+      <Hero />
+      <DropsSection />
+      <SinglesSection />
+      <CustomSections />
+      <BundlesSection />
+      <CommunitySection />
+    </div>
   );
 }

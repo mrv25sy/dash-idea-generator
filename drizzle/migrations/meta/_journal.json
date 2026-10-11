@@ -5,8 +5,50 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1791750181739,
-      "tag": "0000_create_goals",
+      "when": 1791482856092,
+      "tag": "0000_admin_catalog_orders",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791483622428,
+      "tag": "0001_noop_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791484372471,
+      "tag": "0002_store_setup",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791565034706,
+      "tag": "0003_store_admin_and_product_details",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791650000000,
+      "tag": "0004_order_status_lookup",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791656070513,
+      "tag": "0005_order_status_functions",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791724885887,
+      "tag": "0006_settings_profiles_customer_orders",
       "breakpoints": true
     }
   ]

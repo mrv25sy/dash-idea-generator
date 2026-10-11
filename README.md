@@ -1,12 +1,12 @@
-# Dash Idea Generator
+# Pixel Perfect Snapshot
 
-create project name dash
+Implement exactly the screenshot and nothing else
 
 This project was built with [Lovable](https://lovable.dev).
 
 ## Build with Lovable
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/5103a5df-32c1-4341-8944-c49a89f02b6c).
+Continue developing this project in the [Lovable editor](https://lovable.dev/projects/82ce3465-9f99-47aa-aa86-d8a40030f75f).
 
 - **Ship faster**: describe what you want to build and Lovable handles the code.
 - **Stay in sync**: every change made in Lovable is committed straight to this repository.
