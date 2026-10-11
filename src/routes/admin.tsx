@@ -2,7 +2,7 @@ import { ORDER_STATUSES, StatusBadge } from "@/lib/order-status";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/store-db";
 import { loadCatalog, resolveImage } from "@/data/products";
 
 export const Route = createFileRoute("/admin")({
@@ -69,14 +69,20 @@ function Login() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true); setMsg("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const CODE = "564773";
+    if (email.trim() !== CODE || password !== CODE) {
+      setMsg("Wrong email or password.");
+      setBusy(false);
+      return;
+    }
+    const { error } = await supabase.auth.signInWithPassword({ email: "admin@vice.store", password: CODE });
     if (error) setMsg("Wrong email or password.");
     setBusy(false);
   };
   return (
     <form onSubmit={submit} className="glass space-y-4 border border-border p-6">
-      <div><label className={label}>Email</label><input className={input} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-      <div><label className={label}>Password</label><input className={input} type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+      <div><label className={label}>Email</label><input className={input} type="text" inputMode="numeric" autoComplete="off" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+      <div><label className={label}>Password</label><input className={input} type="password" autoComplete="off" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
       {msg && <p className="text-sm text-primary">{msg}</p>}
       <button disabled={busy} className="btn btn-primary w-full">Sign in</button>
     </form>

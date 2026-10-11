@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/store-db";
 import { GOVERNORATES } from "@/lib/cart";
 import { StatusBadge, normStatus } from "@/lib/order-status";
 import { CURRENCY } from "@/config";
