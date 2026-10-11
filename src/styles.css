@@ -198,4 +198,5 @@
 .drop-cover.is-active { transform: scale(1); opacity: 1; }
 .drop-arrow { z-index: 2; width: 44px; height: 44px; background: color-mix(in oklab, var(--background) 65%, transparent); color: var(--foreground); border-color: var(--border); opacity: .35; backdrop-filter: blur(12px); transition: opacity .2s ease; }
 .drop-arrow:hover, .drop-arrow:focus-visible { opacity: 1; }
+@media (min-width: 1024px) { .drop-slide { flex-basis: 440px; } }
 @media (prefers-reduced-motion: reduce) { .drop-cover { transition: none; } }
