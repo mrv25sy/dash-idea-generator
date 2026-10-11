@@ -214,7 +214,7 @@ function GoalsPage() {
                     <button
                       onClick={() => del.mutate(goal)}
                       aria-label={`Delete ${goal.title}`}
-                      className="font-mono text-xs tracking-wider text-muted-foreground uppercase transition-colors hover:text-destructive"
+                      className="rounded-md px-2 py-1 font-mono text-xs tracking-wider text-muted-foreground uppercase transition-colors hover:text-destructive"
                     >
                       Delete
                     </button>
