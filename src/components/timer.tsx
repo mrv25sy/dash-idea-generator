@@ -169,10 +169,7 @@ export function Timer() {
 
   return (
     <section className="w-full max-w-lg">
-      <header className="mb-8 flex items-baseline justify-between">
-        <span className="font-display text-sm font-semibold tracking-[0.28em] text-timer-accent uppercase">
-          Dash
-        </span>
+      <header className="mb-6 flex justify-end">
         <span className="font-mono text-xs tracking-widest text-muted-foreground uppercase">
           {status === "done"
             ? "finished"

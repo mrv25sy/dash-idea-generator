@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useState,
@@ -18,15 +19,48 @@ const SessionContext = createContext<SessionState>({
   loading: true,
 });
 
+const RETURN_PATHS = ["/", "/goals"] as const;
+type ReturnPath = (typeof RETURN_PATHS)[number];
+
+const RETURN_KEY = "dash-return";
+
+/** Where a fresh sign-in should land, validated against known app routes. */
+function takeReturnPath(): ReturnPath | null {
+  const raw = window.sessionStorage.getItem(RETURN_KEY);
+  window.sessionStorage.removeItem(RETURN_KEY);
+  return RETURN_PATHS.includes(raw as ReturnPath) ? (raw as ReturnPath) : null;
+}
+
 /**
- * The app's one and only auth-state listener. Keeps session state for the UI
- * and refreshes router/loader data and cached queries on real transitions.
+ * The app's one and only auth-state listener. Keeps session state for the UI,
+ * refreshes router/loader data and cached queries on real transitions, and
+ * sends a freshly signed-in visitor to the page they came from.
  */
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
   const router = useRouter();
+
+  const applySession = useCallback(
+    (event: string, nextSession: Session | null) => {
+      setSession(nextSession);
+      if (
+        event !== "SIGNED_IN" &&
+        event !== "SIGNED_OUT" &&
+        event !== "USER_UPDATED"
+      ) {
+        return;
+      }
+      if (event === "SIGNED_IN") {
+        const target = takeReturnPath();
+        if (target) void router.navigate({ to: target, replace: true });
+      }
+      void router.invalidate();
+      if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+    },
+    [router, queryClient],
+  );
 
   useEffect(() => {
     let active = true;
@@ -39,16 +73,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     const { data: subscription } = supabase.auth.onAuthStateChange(
       (event, nextSession) => {
-        setSession(nextSession);
-        if (
-          event !== "SIGNED_IN" &&
-          event !== "SIGNED_OUT" &&
-          event !== "USER_UPDATED"
-        ) {
-          return;
-        }
-        void router.invalidate();
-        if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+        applySession(event, nextSession);
       },
     );
 
@@ -56,7 +81,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       active = false;
       subscription.subscription.unsubscribe();
     };
-  }, [router, queryClient]);
+  }, [applySession]);
 
   return (
     <SessionContext.Provider value={{ session, loading }}>

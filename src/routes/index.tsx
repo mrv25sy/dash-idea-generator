@@ -25,7 +25,7 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-6 py-16">
+    <main className="flex min-h-[calc(100svh-4.5rem)] items-center justify-center bg-background px-6 py-10">
       <Timer />
     </main>
   );
