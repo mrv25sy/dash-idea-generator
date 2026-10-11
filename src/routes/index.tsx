@@ -1,12 +1,21 @@
 import { createFileRoute } from "@tanstack/react-router";
 
+import { Timer } from "@/components/timer";
+
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Dash — Your project starts here" },
-      { name: "description", content: "Dash is a fresh project, ready to be built out." },
-      { property: "og:title", content: "Dash — Your project starts here" },
-      { property: "og:description", content: "Dash is a fresh project, ready to be built out." },
+      { title: "Dash — Timer" },
+      {
+        name: "description",
+        content:
+          "Dash is a clean countdown timer: pick a preset, type any time, and let the ring run down.",
+      },
+      { property: "og:title", content: "Dash — Timer" },
+      {
+        property: "og:description",
+        content: "A clean countdown timer with presets, custom times, and a chime when it's up.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -16,11 +25,8 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-background px-6 text-center">
-      <h1 className="text-7xl font-bold tracking-tight text-foreground">Dash</h1>
-      <p className="mt-4 max-w-md text-muted-foreground">
-        Your new project is ready. Tell me what you want Dash to do and I'll build it.
-      </p>
+    <main className="flex min-h-screen items-center justify-center bg-background px-6 py-16">
+      <Timer />
     </main>
   );
 }
