@@ -15,3 +15,4 @@
 - Theme selection uses a root data-theme attribute and semantic CSS token overrides, with local storage only for this visual preference; keeps all pages and cart synchronized without a backend.
 - The announcement ticker contains two identical padded tracks translated by half their combined width; ensures a seamless right-to-left loop.
 - Drop browsing uses the shared Embla carousel controls with centered slides; keeps touch gestures, keyboard navigation, and arrow navigation on one engine.
+- Store data and admin/customer sign-in use the client in src/lib/store-db.ts, which targets the owner's original database; that's where the live accounts, products and orders are.
