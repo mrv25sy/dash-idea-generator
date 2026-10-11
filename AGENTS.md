@@ -14,3 +14,4 @@
 - Shared site logos use square, tightly framed transparent asset pointers; derive the local favicon from the same red source to keep branding consistent.
 - Theme selection uses a root data-theme attribute and semantic CSS token overrides, with local storage only for this visual preference; keeps all pages and cart synchronized without a backend.
 - The announcement ticker contains two identical padded tracks translated by half their combined width; ensures a seamless right-to-left loop.
+- Drop browsing uses the shared Embla carousel controls with centered slides; keeps touch gestures, keyboard navigation, and arrow navigation on one engine.
