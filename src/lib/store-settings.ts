@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/store-db";
 import { PAYMENT_ADDRESS, PAYMENT_NAME } from "@/config";
 import qrAsset from "@/assets/payment-qr.jpg.asset.json";
 

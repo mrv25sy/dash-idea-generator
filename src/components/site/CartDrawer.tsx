@@ -7,7 +7,7 @@ const HISTORY_KEY = "vice-order-history";
 const loadHistory = (): PastOrder[] => { try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; } };
 const saveHistory = (h: PastOrder[]) => localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0, 50)));
 import { bundles, getProduct, loadCatalog } from "@/data/products";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/store-db";
 import { normStatus } from "@/lib/order-status";
 import {
   cart, GOVERNORATES, initCart, lineTotal, loadCustomer, saveCustomer, useCart,

@@ -2,7 +2,7 @@ import { ORDER_STATUSES, StatusBadge } from "@/lib/order-status";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/store-db";
 import { loadCatalog, resolveImage } from "@/data/products";
 
 export const Route = createFileRoute("/admin")({
