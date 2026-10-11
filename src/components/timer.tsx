@@ -31,8 +31,8 @@ function parseDuration(text: string): number | null {
   if (parts.some((p) => !/^\d{1,2}$/.test(p.trim()))) return null;
   const nums = parts.map((p) => Number(p.trim()));
   if (nums.slice(-2).some((n) => n > 59)) return null;
-  const [h, m, s] = nums.length === 3 ? nums : [0, nums[0], nums[1]];
-  const ms = (h * 3600 + m * 60 + s) * 1000;
+  const parts = nums.length === 3 ? nums : [0, ...nums];
+  const [h = 0, m = 0, s = 0] = parts;
   return ms > 0 && ms <= MAX_MS ? ms : null;
 }
 
