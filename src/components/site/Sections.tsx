@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cart } from "@/lib/cart";
 import { CURRENCY, DROP_ACTIVE, ORDERING_ENABLED, INSTAGRAM_URL, WHATSAPP_CHANNEL_URL } from "@/config";
 import { drops, bundles, getProduct, products, singleCategories, onSale, finalPrice, type Product } from "@/data/products";
+import { DropCarousel } from "./DropCarousel";
 
 const price = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: CURRENCY, maximumFractionDigits: 0 }).format(n);
 
@@ -90,21 +91,8 @@ export function DropsSection() {
   return (
     <section id="drops" className={wrap}>
       <FadeUp>
-        <SectionHead eyebrow="Drops" title="Current drops" sub="Swipe to explore every drop." />
-        <div className="-mx-5 flex snap-x snap-mandatory scroll-px-5 gap-4 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {drops.map((drop) => (
-            <article key={drop.name} className="glass flex w-[75vw] max-w-[320px] shrink-0 snap-start flex-col border border-border md:w-[320px]">
-              <Link to="/drop/$name" params={{ name: drop.name }} className="block aspect-[4/5] overflow-hidden">
-                <img src={drop.cover} alt={drop.name} loading="lazy" width={768} height={960} className="h-full w-full object-cover transition-transform duration-700 hover:scale-105" />
-              </Link>
-              <div className="flex flex-1 flex-col gap-2 p-4">
-                <h3 className="font-display text-xl font-semibold uppercase tracking-tight">{drop.name}</h3>
-                <p className="text-xs text-muted-foreground">{drop.tagline}</p>
-                <Link to="/drop/$name" params={{ name: drop.name }} className="btn btn-primary mt-auto h-10 w-full whitespace-nowrap px-2 pt-0 tracking-[.14em]">View drop</Link>
-              </div>
-            </article>
-          ))}
-        </div>
+        <SectionHead eyebrow="Drops" title="Current drops" />
+        <DropCarousel />
       </FadeUp>
     </section>
   );
