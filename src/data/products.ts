@@ -95,7 +95,7 @@ export const getProduct = (id: string) => products.find((p) => p.id === id);
 // ---- Live catalog: products & bundles are managed from /admin and loaded from the database.
 // The arrays above are the offline fallback; they're replaced in place once the database answers.
 import { useSyncExternalStore } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/store-client";
 import { storeClient } from "@/lib/store-client";
 
 export const ASSET_IMAGES: Record<string, string> = {

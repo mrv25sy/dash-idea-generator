@@ -1,5 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 
 // The checked-in 0006 migration extends the store schema beyond the generated
@@ -61,4 +60,17 @@ export type StoreDatabase = Omit<Database, "public"> & {
   };
 };
 
-export const storeClient = supabase as unknown as SupabaseClient<StoreDatabase>;
+// The live store (accounts, products, orders) lives in the owner's original
+// database, not the newer Cloud instance. Publishable key is public by design.
+const STORE_URL = "https://ffctvjfvsowxnikxjlxx.supabase.co";
+const STORE_KEY = "sb_publishable_ULgbrDsaXPYVEC685ttTvw__tZFG9lY";
+
+export const storeClient = createClient(STORE_URL, STORE_KEY, {
+  auth: {
+    storage: typeof window !== "undefined" ? window.localStorage : undefined,
+    persistSession: typeof window !== "undefined",
+    autoRefreshToken: typeof window !== "undefined",
+  },
+}) as unknown as SupabaseClient<StoreDatabase>;
+// Auth + RPC for store pages share this same session.
+export const supabase = storeClient as unknown as SupabaseClient<any, "public", any>;
