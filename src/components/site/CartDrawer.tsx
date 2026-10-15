@@ -52,7 +52,7 @@ function buildMessage(id: string, lines: CartLine[], c: Customer, total: number)
 export function CartDrawer() {
   const s = useCart();
   const pay = useStoreSettings();
-  const [step, setStep] = useState<"cart" | "checkout" | "pay" | "history">("history");
+  const [step, setStep] = useState<"cart" | "checkout" | "pay" | "history">("cart");
   const [form, setForm] = useState<Customer>(emptyCustomer);
   const [errors, setErrors] = useState<Partial<Record<keyof Customer | "sizes", string>>>({});
   const [busy, setBusy] = useState(false);
@@ -66,7 +66,7 @@ export function CartDrawer() {
     localStorage.setItem("vice-user-archived-orders", JSON.stringify(next));
     return next;
   });
-  const [sentNote, setSentNote] = useState("Order placed with your receipt. We'll confirm it soon — watch the status here.");
+  const [sentNote, setSentNote] = useState("");
   const [cancelId, setCancelId] = useState("");
   const [receipt, setReceipt] = useState("");
   const [payErr, setPayErr] = useState("");
