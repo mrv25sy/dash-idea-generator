@@ -239,7 +239,12 @@ export function CartDrawer() {
 
           {step === "history" && (
             <div className="space-y-4">
-              {sentNote && <p className="border border-primary/40 bg-primary/10 p-3 text-xs">{sentNote}</p>}
+              {sentNote && (
+                <div className="flex items-start gap-3 rounded-lg border border-success/35 bg-success/10 p-3">
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-success text-[11px] font-bold text-success-foreground">✓</span>
+                  <p className="text-xs leading-snug text-foreground">{sentNote}</p>
+                </div>
+              )}
               <div className="flex items-center justify-between gap-3">
                 <h3 className="font-display text-sm font-semibold uppercase tracking-[.2em]">Order history</h3>
                 {history.length > 0 && (
