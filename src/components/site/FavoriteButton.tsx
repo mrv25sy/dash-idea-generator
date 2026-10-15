@@ -56,7 +56,7 @@ export function FavoriteButton({ productId, className = "" }: { productId: strin
         <Heart size={16} fill={on ? "currentColor" : "none"} strokeWidth={1.8} />
       </button>
       {msg && (
-        <p className="absolute right-0 top-11 z-10 w-44 border border-border bg-background p-2 text-[11px] text-muted-foreground">
+        <p className="absolute right-0 top-11 z-10 w-[8.5rem] border border-border bg-background p-2 text-[11px] leading-snug text-muted-foreground shadow-md">
           {msg === "signin" ? <><Link to="/account" className="text-primary underline">Sign up or sign in</Link> to save favourites.</> : "Couldn't save. Try again."}
         </p>
       )}
