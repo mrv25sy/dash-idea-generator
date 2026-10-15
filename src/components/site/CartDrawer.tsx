@@ -7,7 +7,7 @@ const HISTORY_KEY = "vice-order-history";
 const loadHistory = (): PastOrder[] => { try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; } };
 const saveHistory = (h: PastOrder[]) => localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0, 50)));
 import { bundles, getProduct, loadCatalog } from "@/data/products";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/store-client";
 import { storeClient } from "@/lib/store-client";
 import { normStatus } from "@/lib/order-status";
 import {
@@ -271,30 +271,38 @@ export function CartDrawer() {
                     const st = fromDb === "Archived" ? "Pending" : fromDb ?? (checked ? "Missing" : o.status === "Canceled" ? "Canceled" : "Pending");
                     const canCancel = st === "Pending";
                     return (
-                    <li key={o.id + o.date} className={`rounded-md border p-4 ${(CARD[st] ?? CARD["Pending"]!).box}`}>
-                      <div className="flex justify-between text-sm font-semibold"><span>{o.id}</span><span>{money(o.total)}</span></div>
-                      <button onClick={() => toggleHidden(o.id)} className="text-[11px] underline underline-offset-4 opacity-70">{hidden.includes(o.id) ? "Unarchive" : "Archive (only for me)"}</button>
-                      <p className="text-xs opacity-70">{new Date(o.date).toLocaleString()}</p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <span className={`grid h-7 w-7 place-items-center rounded-full text-sm ${(CARD[st] ?? CARD["Pending"]!).dot}`}>{(CARD[st] ?? CARD["Pending"]!).icon}</span>
-                        <span className="text-sm font-bold uppercase tracking-widest">{st === "Missing" ? "Not found" : st}</span>
-                      </div>
-                      <p className="mt-1 text-xs font-medium">{(CARD[st] ?? CARD["Pending"]!).text}</p>
-                      <ul className="mt-2 text-xs">{o.items.map((it, i) => <li key={i}>• {it}</li>)}</ul>
-                      {canCancel && (cancelId === o.id ? (
-                        <div className="mt-3 space-y-2">
-                          <SlideToCancel onDone={() => cancelOrder(o.id)} />
-                          <button onClick={() => setCancelId("")} className="text-xs text-muted-foreground underline">Keep my order</button>
+                    <li key={o.id + o.date} className={`overflow-hidden rounded-lg border ${(CARD[st] ?? CARD["Pending"]!).box}`}>
+                      <div className="flex items-center gap-3 px-4 pt-4">
+                        <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm ${(CARD[st] ?? CARD["Pending"]!).dot}`}>{(CARD[st] ?? CARD["Pending"]!).icon}</span>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold uppercase tracking-widest">{st === "Missing" ? "Not found" : st}</p>
+                          <p className="text-xs opacity-80">{(CARD[st] ?? CARD["Pending"]!).text}</p>
                         </div>
-                      ) : (
-                        <button onClick={() => setCancelId(o.id)} className="mt-2 text-xs text-primary underline underline-offset-4">Cancel order</button>
-                      ))}
+                      </div>
+                      <dl className="mx-4 mt-4 grid grid-cols-3 gap-2 border-y border-current/15 py-3 text-xs">
+                        <div><dt className="opacity-60">Order</dt><dd className="font-semibold">{o.id}</dd></div>
+                        <div><dt className="opacity-60">Date</dt><dd className="font-semibold">{new Date(o.date).toLocaleDateString(undefined, { day: "numeric", month: "short" })} · {new Date(o.date).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}</dd></div>
+                        <div className="text-right"><dt className="opacity-60">Total</dt><dd className="font-semibold">{money(o.total)}</dd></div>
+                      </dl>
+                      <ul className="space-y-1.5 px-4 py-3 text-xs">
+                        {o.items.map((it, i) => <li key={i} className="flex gap-2"><span className="opacity-40">—</span><span>{it}</span></li>)}
+                      </ul>
                       {st === "Canceled" && (
-                        <div className="mt-3 border border-primary/40 bg-primary/10 p-3 text-xs">
-                          <p>Your order was canceled. Contact us on WhatsApp <b>{PHONE_NUMBER}</b> to get your refund.</p>
+                        <div className="mx-4 mb-3 rounded-md bg-background/60 p-3 text-xs text-foreground">
+                          <p>Contact us on WhatsApp <b>{PHONE_NUMBER}</b> to get your refund.</p>
                           <a href={`https://wa.me/${PHONE_NUMBER.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi Vice, I canceled order ${o.id} (${money(o.total)}) and would like a refund.`)}`} target="_blank" rel="noopener noreferrer" className="btn btn-primary mt-2 h-9 w-full text-[10px]">Contact us for refund</a>
                         </div>
                       )}
+                      {canCancel && cancelId === o.id && (
+                        <div className="space-y-2 px-4 pb-3">
+                          <SlideToCancel onDone={() => cancelOrder(o.id)} />
+                          <button onClick={() => setCancelId("")} className="text-xs underline opacity-70">Keep my order</button>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between border-t border-current/15 px-4 py-2 text-[11px]">
+                        <button onClick={() => toggleHidden(o.id)} className="underline underline-offset-4 opacity-70 hover:opacity-100">{hidden.includes(o.id) ? "Unarchive" : "Archive"}</button>
+                        {canCancel && cancelId !== o.id && <button onClick={() => setCancelId(o.id)} className="font-semibold text-red-700 underline underline-offset-4">Cancel order</button>}
+                      </div>
                     </li>
                     );
                   })}
@@ -305,7 +313,8 @@ export function CartDrawer() {
 
           {step === "pay" && (
             <div className="space-y-4 text-center">
-              <p className="nav-link">Step 2 — Pay {money(subtotal)}</p>
+              <Steps at={2} />
+              <p className="font-display text-2xl font-semibold">{money(subtotal)}</p>
               <img src={pay.qrUrl} alt="Payment QR code" className="mx-auto w-56 rounded-lg" />
               <div className="border border-border p-3 text-left text-sm">
                 <p><span className="text-muted-foreground">Name: </span>{pay.paymentName}</p>
@@ -323,17 +332,24 @@ export function CartDrawer() {
           )}
 
           {step === "checkout" && (
-            <div className="space-y-4">
-              <Field label="Name" error={errors.name}><input className="field" value={form.name} onChange={(e) => update("name", e.target.value)} autoComplete="name" /></Field>
-              <Field label="Phone" error={errors.phone}><input className="field" type="tel" inputMode="tel" placeholder="09XX XXX XXX" value={form.phone} onChange={(e) => update("phone", e.target.value)} autoComplete="tel" /></Field>
-              <Field label="Governorate" error={errors.governorate}>
-                <select className="field" value={form.governorate} onChange={(e) => update("governorate", e.target.value)}>
-                  <option value="">Select…</option>
-                  {GOVERNORATES.map((g) => <option key={g}>{g}</option>)}
-                </select>
-              </Field>
-              <Field label="Full address" error={errors.address}><textarea className="field min-h-20 py-3" value={form.address} onChange={(e) => update("address", e.target.value)} autoComplete="street-address" /></Field>
-              <Field label="Notes (optional)"><textarea className="field min-h-16 py-3" value={form.notes} onChange={(e) => update("notes", e.target.value)} /></Field>
+            <div className="space-y-5">
+              <Steps at={1} />
+              <section className="space-y-4 rounded-lg border border-border p-4">
+                <p className="nav-link">Contact</p>
+                <Field label="Name" error={errors.name}><input className="field" value={form.name} onChange={(e) => update("name", e.target.value)} autoComplete="name" /></Field>
+                <Field label="Phone" error={errors.phone}><input className="field" type="tel" inputMode="tel" placeholder="09XX XXX XXX" value={form.phone} onChange={(e) => update("phone", e.target.value)} autoComplete="tel" /></Field>
+              </section>
+              <section className="space-y-4 rounded-lg border border-border p-4">
+                <p className="nav-link">Delivery</p>
+                <Field label="Governorate" error={errors.governorate}>
+                  <select className="field" value={form.governorate} onChange={(e) => update("governorate", e.target.value)}>
+                    <option value="">Select…</option>
+                    {GOVERNORATES.map((g) => <option key={g}>{g}</option>)}
+                  </select>
+                </Field>
+                <Field label="Full address" error={errors.address}><textarea className="field min-h-20 py-3" value={form.address} onChange={(e) => update("address", e.target.value)} autoComplete="street-address" /></Field>
+                <Field label="Notes (optional)"><textarea className="field min-h-16 py-3" value={form.notes} onChange={(e) => update("notes", e.target.value)} /></Field>
+              </section>
             </div>
           )}
         </div>
@@ -408,18 +424,31 @@ function Line({ l }: { l: CartLine }) {
               );
             })}
           </div>
-          <div className="mt-3 grid grid-cols-[2.75rem_1fr_2.75rem] items-stretch border border-foreground/70">
-            <button onClick={() => cart.setQty(l.key, l.qty - 1)} disabled={l.qty <= 1} className="h-12 border-r border-border text-base transition hover:bg-foreground hover:text-background disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-foreground" aria-label="Less">−</button>
-            <div className="flex flex-col items-center justify-center">
-              <span key={l.qty} className="font-display text-xl font-semibold leading-none tabular-nums animate-in fade-in slide-in-from-bottom-1">{String(l.qty).padStart(2, "0")}</span>
-              <span className="mt-1 text-[9px] uppercase tracking-[.3em] text-muted-foreground">{l.qty === 1 ? "Piece" : "Pieces"}</span>
+          <div className="mt-3 flex items-center justify-between">
+            <div className="inline-flex h-8 items-center rounded-full border border-border bg-foreground/5">
+              <button onClick={() => cart.setQty(l.key, l.qty - 1)} disabled={l.qty <= 1} className="grid h-8 w-8 place-items-center rounded-full text-sm transition hover:bg-foreground/10 disabled:opacity-30" aria-label="Less">−</button>
+              <span key={l.qty} className="w-6 text-center text-xs font-semibold tabular-nums animate-in fade-in zoom-in-75">{l.qty}</span>
+              <button onClick={() => cart.setQty(l.key, Math.min(10, l.qty + 1))} disabled={l.qty >= 10} className="grid h-8 w-8 place-items-center rounded-full text-sm transition hover:bg-foreground/10 disabled:opacity-30" aria-label="More">+</button>
             </div>
-            <button onClick={() => cart.setQty(l.key, Math.min(10, l.qty + 1))} disabled={l.qty >= 10} className="h-12 border-l border-border text-base transition hover:bg-foreground hover:text-background disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-foreground" aria-label="More">+</button>
+            <button onClick={() => cart.remove(l.key)} className="text-[11px] uppercase tracking-[.2em] text-muted-foreground hover:text-primary">Remove</button>
           </div>
-          <button onClick={() => cart.remove(l.key)} className="mt-2 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">Remove</button>
         </div>
       </div>
     </li>
+  );
+}
+
+function Steps({ at }: { at: 1 | 2 }) {
+  return (
+    <ol className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[.2em]">
+      {["Details", "Pay"].map((t, i) => (
+        <li key={t} className={`flex flex-1 items-center gap-2 ${i + 1 <= at ? "text-foreground" : "text-muted-foreground"}`}>
+          <span className={`grid h-5 w-5 place-items-center rounded-full text-[10px] ${i + 1 <= at ? "bg-primary text-primary-foreground" : "border border-border"}`}>{i + 1}</span>
+          {t}
+          {i === 0 && <span className={`h-px flex-1 ${at > 1 ? "bg-primary" : "bg-border"}`} />}
+        </li>
+      ))}
+    </ol>
   );
 }
 

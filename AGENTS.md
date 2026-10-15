@@ -15,6 +15,6 @@
 - Theme selection uses a root data-theme attribute and semantic CSS token overrides, with local storage only for this visual preference; keeps all pages and cart synchronized without a backend.
 - The announcement ticker contains two identical padded tracks translated by half their combined width; ensures a seamless right-to-left loop.
 - Use Embla for the centered Drops carousel, with content sourced from the existing drops data and presentation in semantic global CSS; this keeps swipe physics, looping, and desktop navigation consistent without duplicating catalog content.
-- Until the generated Cloud snapshot includes migration 0006, use the migration-derived StoreDatabase extension through the existing client for profiles, settings, and order ownership; this preserves one session and strict query types without modifying generated files or changing runtime permissions.
+- All store data and store sign-in (products, orders, profiles, favourites, admin) go through src/lib/store-client.ts, which targets the owner's original database; the Cloud instance holds none of the store tables or accounts.
 - Dashboard-managed drops and custom homepage sections are JSON values in store_settings (drops_json, sections_json), loaded by loadCatalog; avoids schema changes on the owner-managed database.
 - Product ratings live in product_ratings (one row per user+product, RLS own-write); loaded once client-side and shared by all star widgets.

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/store-client";
 import { storeClient } from "@/lib/store-client";
 import { dropClosed, loadCatalog, resolveImage, type CustomSection, type Drop } from "@/data/products";
 

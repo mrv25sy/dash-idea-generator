@@ -3,7 +3,7 @@ import { ORDER_STATUSES, StatusBadge } from "@/lib/order-status";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/store-client";
 import { loadCatalog, resolveImage } from "@/data/products";
 import { DropsTab, SectionsTab, BannersTab } from "@/components/admin/ContentTabs";
 import { BroadcastTab } from "@/components/admin/BroadcastTab";

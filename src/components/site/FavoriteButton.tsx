@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Link } from "@tanstack/react-router";
 import { Heart } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/store-client";
 import { storeClient } from "@/lib/store-client";
 
 // Signed-in user's favorites, loaded once and shared by every heart.

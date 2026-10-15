@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Link } from "@tanstack/react-router";
 import { Star } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/store-client";
 import { storeClient } from "@/lib/store-client";
 
 // All ratings are loaded once and shared by every star widget on the page.
