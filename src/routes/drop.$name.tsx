@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { drops, products, useCatalogVersion } from "@/data/products";
+import { dropClosed, drops, products, useCatalogVersion } from "@/data/products";
 import { ProductCard } from "@/components/site/Sections";
 
 export const Route = createFileRoute("/drop/$name")({
@@ -32,8 +32,9 @@ function DropPage() {
       <h1 className="font-display text-4xl font-semibold uppercase tracking-tight md:text-6xl">{info?.name ?? name}</h1>
       {info?.tagline && <p className="mt-2 text-sm text-muted-foreground">{info.tagline}</p>}
       <p className="mt-6 text-xs text-muted-foreground">{items.length} {items.length === 1 ? "piece" : "pieces"}</p>
+      {info && dropClosed(info) && <p className="mt-4 inline-block bg-primary px-3 py-2 text-xs font-semibold uppercase tracking-[.2em] text-primary-foreground">This drop is closed</p>}
       {items.length > 0 ? (
-        <div className="mt-6 grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-4">{items.map((p) => <ProductCard key={p.id} p={p} />)}</div>
+        <div className={`mt-6 ${info && dropClosed(info) ? "pointer-events-none select-none blur-sm" : ""}`}><div className=" grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-4">{items.map((p) => <ProductCard key={p.id} p={p} />)}</div></div>
       ) : (
         <p className="py-16 text-sm text-muted-foreground">Nothing in this drop yet.</p>
       )}

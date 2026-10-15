@@ -4,6 +4,8 @@ import { CURRENCY, INSTAGRAM_URL, ORDERING_ENABLED, WHATSAPP_CHANNEL_URL } from 
 import { cart } from "@/lib/cart";
 import { getProduct, loadCatalog, onSale, products } from "@/data/products";
 import { PriceTag, ProductCard } from "@/components/site/Sections";
+import { RatingStars } from "@/components/site/RatingStars";
+import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { NotFoundView } from "@/components/site/NotFoundView";
 
 const price = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: CURRENCY, maximumFractionDigits: 0 }).format(n);
@@ -83,8 +85,12 @@ function ProductView() {
         <div className="flex flex-col gap-7">
           <div>
             {p.dropName && <p className="nav-link mb-2 text-primary">{p.dropName}</p>}
-            <h1 className="font-display text-3xl font-semibold uppercase tracking-tight md:text-5xl">{p.name}</h1>
+            <div className="flex items-start justify-between gap-4">
+              <h1 className="font-display text-3xl font-semibold uppercase tracking-tight md:text-5xl">{p.name}</h1>
+              <FavoriteButton productId={p.id} className="mt-1 shrink-0" />
+            </div>
             <p className="mt-3 text-xl"><PriceTag p={p} /></p>
+            <div className="mt-3"><RatingStars productId={p.id} /></div>
             {p.description && <p className="mt-5 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{p.description}</p>}
             {p.details && p.details.length > 0 && (
               <dl className="mt-5 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 border-t border-border pt-4 text-sm">
@@ -115,11 +121,17 @@ function ProductView() {
           </div>
 
           <div>
-            <p className="nav-link mb-3">Quantity</p>
-            <div className="inline-flex items-center border border-border">
-              <button onClick={() => setQty(Math.max(1, qty - 1))} className="h-11 w-11" aria-label="Less">−</button>
-              <span className="w-10 text-center text-sm">{qty}</span>
-              <button onClick={() => setQty(Math.min(10, qty + 1))} className="h-11 w-11" aria-label="More">+</button>
+            <div className="mb-3 flex items-baseline justify-between">
+              <p className="nav-link">Quantity</p>
+              <span className="text-[10px] uppercase tracking-[.25em] text-muted-foreground">Max 10</span>
+            </div>
+            <div className="grid grid-cols-[3.5rem_1fr_3.5rem] items-stretch border border-foreground/70">
+              <button onClick={() => setQty(Math.max(1, qty - 1))} disabled={qty <= 1} className="h-14 border-r border-border text-lg transition hover:bg-foreground hover:text-background disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-foreground" aria-label="Less">−</button>
+              <div className="flex flex-col items-center justify-center">
+                <span key={qty} className="font-display text-2xl font-semibold leading-none tabular-nums animate-in fade-in slide-in-from-bottom-1">{String(qty).padStart(2, "0")}</span>
+                <span className="mt-1 text-[9px] uppercase tracking-[.3em] text-muted-foreground">{qty === 1 ? "Piece" : "Pieces"}</span>
+              </div>
+              <button onClick={() => setQty(Math.min(10, qty + 1))} disabled={qty >= 10} className="h-14 border-l border-border text-lg transition hover:bg-foreground hover:text-background disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-foreground" aria-label="More">+</button>
             </div>
           </div>
 

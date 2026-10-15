@@ -9,7 +9,7 @@ export function Footer() {
   return (
     <footer className="relative overflow-hidden border-t border-border pt-10">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 md:flex-row md:items-center md:justify-between md:px-8">
-        <Logo className="h-10 w-10" />
+        <Logo className="h-9 w-5 shrink-0" />
         <div className="flex gap-8">
           <button onClick={() => setShipOpen((o) => !o)} aria-expanded={shipOpen} className="nav-link">Shipping</button>
           <a href={WHATSAPP_CHAT} target="_blank" rel="noopener noreferrer" className="nav-link">Customer Support</a>

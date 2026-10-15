@@ -9,3 +9,7 @@
 - [x] Phone-screen review of all pages (no overflow, spacing fine)
 - [x] WhatsApp order number set to +963 962 460 418 (from Ahmad)
 - [x] Test order flow end to end: cart → checkout → WhatsApp opens with correct number
+- [x] Admin Sections tab + Bundles in navigation
+- [x] Admin Drops tab: covers, products, archive, close timer + blur
+- [x] Product star ratings (sign-in required) — needs ratings SQL run on database
+- [x] Crew banner between Drops and Singles

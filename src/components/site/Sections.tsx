@@ -2,8 +2,10 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cart } from "@/lib/cart";
 import { CURRENCY, DROP_ACTIVE, ORDERING_ENABLED, INSTAGRAM_URL, WHATSAPP_CHANNEL_URL } from "@/config";
-import { drops, bundles, getProduct, products, singleCategories, onSale, finalPrice, type Product } from "@/data/products";
-import { DropCarousel } from "./DropCarousel";
+import { visibleDrops, customSections, banners, resolveImage, sectionAnchor, bundles, getProduct, products, singleCategories, onSale, finalPrice, type Product } from "@/data/products";
+import { DropsCarousel } from "./DropsCarousel";
+import { RatingStars } from "./RatingStars";
+import { FavoriteButton } from "./FavoriteButton";
 
 const price = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: CURRENCY, maximumFractionDigits: 0 }).format(n);
 
@@ -54,13 +56,15 @@ export function ProductCard({ p }: { p: Product }) {
           {onSale(p) && <span className="bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-[.2em] text-destructive-foreground">Sale</span>}
           {p.badge && <span className=" bg-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] text-primary-foreground">{p.badge}</span>}
         </div>
-        {!available && <span className="absolute right-3 top-3 bg-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] text-primary-foreground">{soon ? "Soon" : "Sold out"}</span>}
+        {!available && <span className="absolute bottom-3 right-3 bg-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] text-primary-foreground">{soon ? "Soon" : "Sold out"}</span>}
+        <FavoriteButton productId={p.id} className="absolute right-3 top-3" />
       </Link>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-2">
           <h3 className="min-w-0 break-words text-sm font-medium uppercase tracking-wide"><Link to="/product/$id" params={{ id: p.id }} className="hover:text-primary">{p.name}</Link></h3>
           <PriceTag p={p} className="shrink-0 text-sm" />
         </div>
+        <RatingStars productId={p.id} compact />
         <div className="flex gap-1.5">
           {p.colors.map((c) => <span key={c.name} title={c.name} className="h-3.5 w-3.5 rounded-full border border-border" style={{ background: c.hex }} />)}
         </div>
@@ -87,12 +91,12 @@ const wrap = "mx-auto max-w-7xl px-5 py-20 md:py-28";
 const grid = "grid grid-cols-2 gap-3 md:gap-5 lg:grid-cols-4";
 
 export function DropsSection() {
-  if (!DROP_ACTIVE || drops.length === 0) return null;
+  if (!DROP_ACTIVE || visibleDrops().length === 0) return null;
   return (
     <section id="drops" className={wrap}>
       <FadeUp>
         <SectionHead eyebrow="Drops" title="Current drops" />
-        <DropCarousel />
+        <DropsCarousel />
       </FadeUp>
     </section>
   );
@@ -100,18 +104,58 @@ export function DropsSection() {
 
 /** Custom sections created from the dashboard: products whose type is "section:<Name>". */
 export function CustomSections() {
-  const names = [...new Set(products.filter((p) => p.type.startsWith("section:") && p.type.length > 8).map((p) => p.type.slice(8)))];
+  const fromProducts = products.filter((p) => p.type.startsWith("section:") && p.type.length > 8).map((p) => p.type.slice(8));
+  const names = [...new Set([...customSections.map((s) => s.name), ...fromProducts])];
   return (
     <>
-      {names.map((n) => (
-        <section key={n} className={wrap}>
+      {names.map((n) => {
+        const meta = customSections.find((s) => s.name === n);
+        return (
+        <section key={n} id={sectionAnchor(n)} className={wrap}>
           <FadeUp>
-            <SectionHead title={n} />
-            <div className={grid}>{products.filter((p) => p.type === `section:${n}`).map((p) => <ProductCard key={p.id} p={p} />)}</div>
+            <SectionHead {...(meta?.eyebrow ? { eyebrow: meta.eyebrow } : {})} title={meta?.title || n} />
+            {meta?.description && <p className="-mt-4 mb-8 max-w-3xl whitespace-pre-line text-base leading-relaxed text-muted-foreground">{meta.description}</p>}
+            {products.some((p) => p.type === `section:${n}`)
+              ? <div className={grid}>{products.filter((p) => p.type === `section:${n}`).map((p) => <ProductCard key={p.id} p={p} />)}</div>
+              : !meta?.description && <p className="text-sm text-muted-foreground">New pieces coming soon.</p>}
           </FadeUp>
         </section>
-      ))}
+        );
+      })}
     </>
+  );
+}
+
+export function CrewBanner() {
+  const list = banners.map(resolveImage).filter(Boolean);
+  const [i, setI] = useState(0);
+  const [paused, setPaused] = useState(0);
+  const startX = useRef<number | null>(null);
+  useEffect(() => {
+    if (list.length < 2) return;
+    const t = setInterval(() => setI((n) => (n + 1) % list.length), 5000);
+    return () => clearInterval(t);
+  }, [list.length, paused]);
+  if (list.length === 0) return null;
+  const go = (d: number) => { setI((n) => (n + d + list.length) % list.length); setPaused((p) => p + 1); };
+  return (
+    <section className="relative w-full touch-pan-y select-none overflow-hidden" aria-label="Vice lookbook"
+      onPointerDown={(e) => { startX.current = e.clientX; }}
+      onPointerUp={(e) => { if (startX.current === null) return; const dx = e.clientX - startX.current; startX.current = null; if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1); }}
+      onPointerCancel={() => { startX.current = null; }}>
+      <div className="flex transition-transform duration-700 ease-out" style={{ transform: `translateX(-${(i % list.length) * 100}%)` }}>
+        {list.map((src, k) => (
+          <img key={k} src={src} alt="Vice crew wearing Vice t-shirts" loading={k === 0 ? "eager" : "lazy"} width={1920} height={710} className="aspect-[2.7/1] w-full shrink-0 object-cover" />
+        ))}
+      </div>
+      {list.length > 1 && (
+        <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2">
+          {list.map((_, k) => (
+            <button key={k} type="button" aria-label={`Photo ${k + 1}`} onClick={() => setI(k)} className={`h-1.5 w-6 transition-colors ${k === i % list.length ? "bg-primary" : "bg-foreground/40"}`} />
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

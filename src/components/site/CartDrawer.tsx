@@ -7,7 +7,8 @@ const HISTORY_KEY = "vice-order-history";
 const loadHistory = (): PastOrder[] => { try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]"); } catch { return []; } };
 const saveHistory = (h: PastOrder[]) => localStorage.setItem(HISTORY_KEY, JSON.stringify(h.slice(0, 50)));
 import { bundles, getProduct, loadCatalog } from "@/data/products";
-import { supabase } from "@/lib/store-db";
+import { supabase } from "@/integrations/supabase/client";
+import { storeClient } from "@/lib/store-client";
 import { normStatus } from "@/lib/order-status";
 import {
   cart, GOVERNORATES, initCart, lineTotal, loadCustomer, saveCustomer, useCart,
@@ -57,18 +58,27 @@ export function CartDrawer() {
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState<PastOrder[]>([]);
   const [copied, setCopied] = useState(false);
+  const [hidden, setHidden] = useState<string[]>([]);
+  const [showHidden, setShowHidden] = useState(false);
+  useEffect(() => { try { setHidden(JSON.parse(localStorage.getItem("vice-user-archived-orders") || "[]")); } catch { /* ignore */ } }, []);
+  const toggleHidden = (id: string) => setHidden((h) => {
+    const next = h.includes(id) ? h.filter((x) => x !== id) : [...h, id];
+    localStorage.setItem("vice-user-archived-orders", JSON.stringify(next));
+    return next;
+  });
   const [sentNote, setSentNote] = useState("");
   const [cancelId, setCancelId] = useState("");
   const [receipt, setReceipt] = useState("");
   const [payErr, setPayErr] = useState("");
 
   useEffect(() => {
-    loadCatalog().finally(initCart); setForm(loadCustomer()); setHistory(loadHistory());
+    loadCatalog().finally(initCart); setForm({ ...loadCustomer(), address: "" }); setHistory(loadHistory());
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
-      const { data: p } = await supabase.from("profiles").select("full_name,phone,governorate,address").eq("id", u.user.id).maybeSingle();
-      if (p) setForm((f) => ({ ...f, name: f.name || p.full_name || "", phone: f.phone || p.phone || "", governorate: f.governorate || p.governorate || "", address: f.address || p.address || "" }));
+      // Address is intentionally never auto-filled — customers type it for every order.
+      const { data: p } = await storeClient.from("profiles").select("full_name,phone").eq("id", u.user.id).maybeSingle();
+      if (p) setForm((f) => ({ ...f, name: f.name || p.full_name || "", phone: f.phone || p.phone || "" }));
     })();
   }, []);
   useEffect(() => { if (!s.open) setStep("cart"); }, [s.open]);
@@ -155,7 +165,7 @@ export function CartDrawer() {
     const id = `#VC-${Math.floor(1000 + Math.random() * 9000)}`;
     const items = s.lines.map((l) => l.kind === "bundle" ? `${bundles.find((b) => b.id === l.bundleId)?.name ?? "Bundle"} × ${l.qty}` : `${getProduct(l.pieces[0]?.productId ?? "")?.name} (${l.pieces[0]?.size}) × ${l.qty}`);
     const { data: authUser } = await supabase.auth.getUser();
-    const { error } = await supabase.from("orders").insert({
+    const { error } = await storeClient.from("orders").insert({
       user_id: authUser.user?.id ?? null,
       order_code: id, status: "Pending", name: form.name.trim(), phone: form.phone.trim(), governorate: form.governorate,
       address: form.address.trim(), notes: form.notes.trim() || null, total: subtotal,
@@ -249,15 +259,21 @@ export function CartDrawer() {
               ) : checkedAt ? (
                 <p className="text-[11px] text-muted-foreground">Status checked at {checkedAt}</p>
               ) : null}
+              {history.some((o) => hidden.includes(o.id)) && (
+                <button onClick={() => setShowHidden(!showHidden)} className="text-xs text-muted-foreground underline underline-offset-4">
+                  {showHidden ? "Back to my orders" : `Archived orders (${history.filter((o) => hidden.includes(o.id)).length})`}
+                </button>
+              )}
               {history.length === 0 ? <p className="text-sm text-muted-foreground">No orders yet.</p> : (
                 <ul className="space-y-3">
-                  {history.map((o) => {
+                  {history.filter((o) => hidden.includes(o.id) === showHidden).map((o) => {
                     const fromDb = live[o.id];
                     const st = fromDb === "Archived" ? "Pending" : fromDb ?? (checked ? "Missing" : o.status === "Canceled" ? "Canceled" : "Pending");
                     const canCancel = st === "Pending";
                     return (
                     <li key={o.id + o.date} className={`rounded-md border p-4 ${(CARD[st] ?? CARD["Pending"]!).box}`}>
                       <div className="flex justify-between text-sm font-semibold"><span>{o.id}</span><span>{money(o.total)}</span></div>
+                      <button onClick={() => toggleHidden(o.id)} className="text-[11px] underline underline-offset-4 opacity-70">{hidden.includes(o.id) ? "Unarchive" : "Archive (only for me)"}</button>
                       <p className="text-xs opacity-70">{new Date(o.date).toLocaleString()}</p>
                       <div className="mt-2 flex items-center gap-2">
                         <span className={`grid h-7 w-7 place-items-center rounded-full text-sm ${(CARD[st] ?? CARD["Pending"]!).dot}`}>{(CARD[st] ?? CARD["Pending"]!).icon}</span>
@@ -392,14 +408,15 @@ function Line({ l }: { l: CartLine }) {
               );
             })}
           </div>
-          <div className="mt-3 flex items-center justify-between">
-            <div className="inline-flex items-center border border-border">
-              <button onClick={() => cart.setQty(l.key, l.qty - 1)} className="h-8 w-8" aria-label="Less">−</button>
-              <span className="w-7 text-center text-xs">{l.qty}</span>
-              <button onClick={() => cart.setQty(l.key, l.qty + 1)} className="h-8 w-8" aria-label="More">+</button>
+          <div className="mt-3 grid grid-cols-[2.75rem_1fr_2.75rem] items-stretch border border-foreground/70">
+            <button onClick={() => cart.setQty(l.key, l.qty - 1)} disabled={l.qty <= 1} className="h-12 border-r border-border text-base transition hover:bg-foreground hover:text-background disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-foreground" aria-label="Less">−</button>
+            <div className="flex flex-col items-center justify-center">
+              <span key={l.qty} className="font-display text-xl font-semibold leading-none tabular-nums animate-in fade-in slide-in-from-bottom-1">{String(l.qty).padStart(2, "0")}</span>
+              <span className="mt-1 text-[9px] uppercase tracking-[.3em] text-muted-foreground">{l.qty === 1 ? "Piece" : "Pieces"}</span>
             </div>
-            <button onClick={() => cart.remove(l.key)} className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">Remove</button>
+            <button onClick={() => cart.setQty(l.key, Math.min(10, l.qty + 1))} disabled={l.qty >= 10} className="h-12 border-l border-border text-base transition hover:bg-foreground hover:text-background disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-foreground" aria-label="More">+</button>
           </div>
+          <button onClick={() => cart.remove(l.key)} className="mt-2 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">Remove</button>
         </div>
       </div>
     </li>

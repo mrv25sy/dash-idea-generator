@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/store-db";
+import { supabase } from "@/integrations/supabase/client";
+import { storeClient } from "@/lib/store-client";
 import { PAYMENT_ADDRESS, PAYMENT_NAME } from "@/config";
 import qrAsset from "@/assets/payment-qr.jpg.asset.json";
 
@@ -11,7 +12,7 @@ export function useStoreSettings() {
   const [s, setS] = useState<StoreSettings>(fallback);
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("store_settings").select("key,value");
+      const { data } = await storeClient.from("store_settings").select("key,value");
       if (!data) return;
       const m = Object.fromEntries(data.map((r) => [r.key, r.value]));
       let qrUrl = fallback.qrUrl;

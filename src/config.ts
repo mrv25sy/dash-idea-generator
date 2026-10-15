@@ -12,3 +12,4 @@ export const SLOGAN = "Street calls, we answer";
 // Online payment (shown at the last checkout step)
 export const PAYMENT_NAME = "souha ghandour";
 export const PAYMENT_ADDRESS = "0fb817f99955a1fb3b671ccbce1d6434";
+export const ADMIN_EMAIL = "vicemanger26@gmail.com";

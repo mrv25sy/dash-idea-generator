@@ -1,9 +1,12 @@
+import { ADMIN_EMAIL } from "@/config";
 import { ORDER_STATUSES, StatusBadge } from "@/lib/order-status";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/lib/store-db";
+import { supabase } from "@/integrations/supabase/client";
 import { loadCatalog, resolveImage } from "@/data/products";
+import { DropsTab, SectionsTab, BannersTab } from "@/components/admin/ContentTabs";
+import { BroadcastTab } from "@/components/admin/BroadcastTab";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -37,6 +40,7 @@ function AdminPage() {
 
   useEffect(() => {
     if (!session) { setIsAdmin(null); return; }
+    if ((session.user.email ?? "").toLowerCase() !== ADMIN_EMAIL) { setIsAdmin(false); return; }
     supabase.rpc("has_role", { _user_id: session.user.id, _role: "admin" }).then(({ data }) => setIsAdmin(!!data));
   }, [session]);
 
@@ -69,14 +73,15 @@ function Login() {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true); setMsg("");
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-    if (error) setMsg(error.message);
+    if (email.trim().toLowerCase() !== ADMIN_EMAIL) { setMsg("Access denied: this portal is only for the store owner."); setBusy(false); return; }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) setMsg("Wrong email or password.");
     setBusy(false);
   };
   return (
     <form onSubmit={submit} className="glass space-y-4 border border-border p-6">
-      <div><label className={label}>Email</label><input className={input} type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
-      <div><label className={label}>Password</label><input className={input} type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+      <div><label className={label}>Email</label><input className={input} type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+      <div><label className={label}>Password</label><input className={input} type="password" required value={password} onChange={(e) => setPassword(e.target.value)} /></div>
       {msg && <p className="text-sm text-primary">{msg}</p>}
       <button disabled={busy} className="btn btn-primary w-full">Sign in</button>
     </form>
@@ -92,7 +97,7 @@ type BundleRow = { id: string; name: string; product_ids: string[]; price: numbe
 type OrderRow = { id: string; order_code: string; name: string; phone: string; governorate: string; address: string; notes: string | null; items: unknown; total: number; status: string; created_at: string };
 
 function Dashboard({ email }: { email: string }) {
-  const [tab, setTab] = useState<"products" | "bundles" | "orders">("orders");
+  const [tab, setTab] = useState<"products" | "bundles" | "orders" | "drops" | "sections" | "banners" | "inbox">("orders");
   const [rk, setRk] = useState(0);
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
@@ -104,14 +109,18 @@ function Dashboard({ email }: { email: string }) {
           <button className="btn btn-ghost h-9" onClick={() => supabase.auth.signOut()}>Sign out</button>
         </div>
       </div>
-      <div className="mb-8 flex gap-2 border-b border-border">
-        {(["orders", "products", "bundles"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={`nav-link -mb-px border-b-2 px-4 py-3 ${tab === t ? "border-primary text-foreground" : "border-transparent"}`}>{t === "products" ? "Designs" : t}</button>
+      <div className="mb-8 flex gap-2 overflow-x-auto border-b border-border">
+        {(["orders", "products", "drops", "bundles", "sections", "banners", "inbox"] as const).map((t) => (
+          <button key={t} onClick={() => setTab(t)} className={`nav-link -mb-px whitespace-nowrap border-b-2 px-4 py-3 ${tab === t ? "border-primary text-foreground" : "border-transparent"}`}>{t === "products" ? "Designs" : t === "inbox" ? "Messages" : t}</button>
         ))}
       </div>
       {tab === "products" && <ProductsTab key={rk} />}
       {tab === "bundles" && <BundlesTab key={rk} />}
       {tab === "orders" && <OrdersTab key={rk} />}
+      {tab === "drops" && <DropsTab key={rk} />}
+      {tab === "sections" && <SectionsTab key={rk} />}
+      {tab === "banners" && <BannersTab key={rk} />}
+      {tab === "inbox" && <BroadcastTab key={rk} />}
     </div>
   );
 }

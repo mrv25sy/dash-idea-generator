@@ -111,12 +111,12 @@ function RootComponent() {
       {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
       <Background />
       <div className="relative z-10">
-        <AnnouncementBar />
-        <Navbar />
+        {!pathname.startsWith("/admin") && <AnnouncementBar />}
+        {!pathname.startsWith("/admin") && <Navbar />}
         <main key={pathname} className="page-in">
           <Outlet />
         </main>
-        <Footer />
+        {!pathname.startsWith("/admin") && <Footer />}
       </div>
       {!pathname.startsWith("/admin") && <CartDrawer />}
     </QueryClientProvider>

@@ -20,11 +20,11 @@ CREATE FUNCTION public.has_role(_user_id uuid, _role public.app_role) RETURNS bo
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS
 $$ SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = _user_id AND role = _role) $$;
 
--- First account to sign up becomes the admin.
+-- Only the owner email becomes admin.
 CREATE FUNCTION public.first_user_admin() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  IF NOT EXISTS (SELECT 1 FROM public.user_roles WHERE role = 'admin') THEN
+  IF lower(NEW.email) = 'vicemanger26@gmail.com' THEN
     INSERT INTO public.user_roles(user_id, role) VALUES (NEW.id, 'admin');
   END IF;
   RETURN NEW;
@@ -151,3 +151,58 @@ CREATE POLICY "admin upload product images" ON storage.objects FOR INSERT TO aut
   WITH CHECK (bucket_id = 'product-images' AND public.has_role(auth.uid(), 'admin'));
 CREATE POLICY "admin delete product images" ON storage.objects FOR DELETE TO authenticated
   USING (bucket_id = 'product-images' AND public.has_role(auth.uid(), 'admin'));
+
+-- PRODUCT RATINGS (1–5 stars, signed-in customers only) -----------------
+CREATE TABLE IF NOT EXISTS public.product_ratings (
+  product_id text NOT NULL,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  stars smallint NOT NULL CHECK (stars BETWEEN 1 AND 5),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (product_id, user_id)
+);
+GRANT SELECT ON public.product_ratings TO anon, authenticated;
+GRANT INSERT, UPDATE, DELETE ON public.product_ratings TO authenticated;
+GRANT ALL ON public.product_ratings TO service_role;
+ALTER TABLE public.product_ratings ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "public read ratings" ON public.product_ratings FOR SELECT USING (true);
+CREATE POLICY "own rating insert" ON public.product_ratings FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+CREATE POLICY "own rating update" ON public.product_ratings FOR UPDATE TO authenticated USING (user_id = auth.uid()) WITH CHECK (user_id = auth.uid());
+CREATE POLICY "own rating delete" ON public.product_ratings FOR DELETE TO authenticated USING (user_id = auth.uid());
+
+-- PROFILE PHOTOS + STORE INBOX -----------------------------------------
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url text;
+CREATE TABLE IF NOT EXISTS public.broadcast_messages (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL CHECK (length(title) BETWEEN 1 AND 200),
+  body text NOT NULL CHECK (length(body) BETWEEN 1 AND 5000),
+  tag text,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+GRANT SELECT ON public.broadcast_messages TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.broadcast_messages TO authenticated;
+GRANT ALL ON public.broadcast_messages TO service_role;
+ALTER TABLE public.broadcast_messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "anyone reads messages" ON public.broadcast_messages FOR SELECT TO anon, authenticated USING (true);
+CREATE POLICY "admin writes messages" ON public.broadcast_messages FOR ALL TO authenticated
+  USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
+CREATE POLICY "users upload own avatar" ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'product-images' AND (storage.foldername(name))[1] = 'avatars' AND (storage.foldername(name))[2] = auth.uid()::text);
+CREATE POLICY "users read own avatar" ON storage.objects FOR SELECT TO authenticated
+  USING (bucket_id = 'product-images' AND (storage.foldername(name))[1] = 'avatars' AND (storage.foldername(name))[2] = auth.uid()::text);
+CREATE POLICY "users update own avatar" ON storage.objects FOR UPDATE TO authenticated
+  USING (bucket_id = 'product-images' AND (storage.foldername(name))[1] = 'avatars' AND (storage.foldername(name))[2] = auth.uid()::text);
+
+-- PRODUCT FAVORITES ----------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.product_favorites (
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  product_id text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (user_id, product_id)
+);
+GRANT SELECT, INSERT, DELETE ON public.product_favorites TO authenticated;
+GRANT ALL ON public.product_favorites TO service_role;
+ALTER TABLE public.product_favorites ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own favorites read" ON public.product_favorites FOR SELECT TO authenticated USING (user_id = auth.uid());
+CREATE POLICY "own favorites insert" ON public.product_favorites FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());
+CREATE POLICY "own favorites delete" ON public.product_favorites FOR DELETE TO authenticated USING (user_id = auth.uid());

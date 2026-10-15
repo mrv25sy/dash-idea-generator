@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCatalogVersion } from "@/data/products";
 import { Hero } from "@/components/site/Hero";
-import { DropsSection, SinglesSection, BundlesSection, CommunitySection, CustomSections } from "@/components/site/Sections";
+import { DropsSection, SinglesSection, BundlesSection, CommunitySection, CustomSections, CrewBanner } from "@/components/site/Sections";
 
 const title = "Vice — Street calls, we answer";
 const description = "Vice is a Syrian streetwear brand. Drops, singles and bundles, shipping to all Syrian governorates.";
@@ -26,6 +26,7 @@ function Index() {
     <div key={v} className="contents">
       <Hero />
       <DropsSection />
+      <CrewBanner />
       <SinglesSection />
       <CustomSections />
       <BundlesSection />

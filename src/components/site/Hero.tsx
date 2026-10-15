@@ -7,7 +7,7 @@ export function Hero() {
   return (
     <section id="top" className="relative flex min-h-[calc(100svh-6rem)] flex-col items-center justify-center overflow-hidden px-5 text-center">
       <div aria-hidden className="hero-glow" />
-      <Logo variant="red" className="relative h-14 w-14 md:h-20 md:w-20" />
+      <Logo variant="red" className="relative h-[72px] w-10 shrink-0" />
       <h1 className="relative mt-7 font-display text-3xl font-semibold uppercase leading-[1.05] tracking-tight md:text-4xl lg:text-5xl">
         Street calls,<br />we answer
       </h1>

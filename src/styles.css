@@ -192,11 +192,39 @@
 .field option { background: var(--popover); color: var(--popover-foreground); }
 @media (min-width: 768px) { .field { font-size: 14px; } }
 
-.drop-carousel { margin-inline: -20px; }
-.drop-slide { flex-basis: min(72%, 340px); touch-action: pan-y pinch-zoom; }
-.drop-cover { margin-inline: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); transform: scale(.86); opacity: .45; transition: transform .4s ease, opacity .4s ease; }
-.drop-cover.is-active { transform: scale(1); opacity: 1; }
-.drop-arrow { z-index: 2; width: 44px; height: 44px; background: color-mix(in oklab, var(--background) 65%, transparent); color: var(--foreground); border-color: var(--border); opacity: .35; backdrop-filter: blur(12px); transition: opacity .2s ease; }
-.drop-arrow:hover, .drop-arrow:focus-visible { opacity: 1; }
-@media (min-width: 1024px) { .drop-slide { flex-basis: 440px; } }
-@media (prefers-reduced-motion: reduce) { .drop-cover { transition: none; } }
+:root {
+  --drop-caption-foreground: oklch(0.98 0 0);
+  --drop-caption-overlay: linear-gradient(180deg, transparent 35%, oklch(0.1 0 0 / 60%) 65%, oklch(0.1 0 0 / 96%));
+  --drop-card-shadow: 0 16px 40px oklch(0.1 0 0 / 20%);
+}
+.drops-carousel { position: relative; }
+.drops-viewport { overflow: hidden; touch-action: pan-y pinch-zoom; cursor: grab; }
+.drops-viewport:active { cursor: grabbing; }
+.drops-track { display: flex; align-items: center; }
+.drops-slide { flex: 0 0 40%; min-width: 0; padding: 24px 8px; }
+.drops-card { position: relative; transform: scale(.84); opacity: .55; transition: transform 550ms cubic-bezier(.2,.7,.2,1), opacity 550ms ease; border-radius: 8px; overflow: hidden; }
+.drops-card.is-selected { transform: scale(1); opacity: 1; box-shadow: var(--drop-card-shadow); }
+.drops-card-link { display: block; position: relative; aspect-ratio: 4/5; color: var(--drop-caption-foreground); }
+.drops-card-link:focus-visible { outline: 3px solid var(--primary); outline-offset: -3px; }
+.drops-cover { display: block; width: 100%; height: 100%; object-fit: cover; user-select: none; }
+.drops-card.is-closed .drops-cover { filter: blur(10px) grayscale(.6); transform: scale(1.08); }
+.drops-timer { position: absolute; top: .75rem; left: .75rem; z-index: 2; background: var(--primary); color: var(--primary-foreground); padding: .3rem .55rem; font-size: 10px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; font-variant-numeric: tabular-nums; }
+.drops-card-link { position: relative; }
+.stars { display: inline-flex; gap: 2px; }
+.stars button { color: var(--muted-foreground); line-height: 1; }
+.stars .on { color: var(--primary); }
+.drops-card-caption { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 24px; background: var(--drop-caption-overlay); }
+.drops-card-caption h3, .drops-card-caption p { overflow-wrap: anywhere; letter-spacing: 0; }
+.drops-card-caption p { opacity: .8; }
+.drops-card-cta { display: flex; align-items: center; gap: 10px; margin-top: 18px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+.drops-navigation { display: flex; align-items: center; justify-content: center; min-height: 48px; position: relative; margin-top: 12px; }
+.drops-counter { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--foreground); }
+.drops-counter span { color: var(--muted-foreground); margin-left: 6px; }
+.drops-arrows { display: flex; gap: 10px; position: absolute; right: 8px; }
+@media (max-width: 767px) {
+  .drops-carousel { margin-inline: -20px; }
+  .drops-slide { flex-basis: 70%; padding: 18px 4px; }
+  .drops-card-caption { padding: 18px; }
+  .drops-arrows { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .drops-card { transition: none; } }

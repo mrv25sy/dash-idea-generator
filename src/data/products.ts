@@ -5,6 +5,7 @@ import sakura from "@/assets/p-sakura.jpg";
 import lastDance from "@/assets/p-lastdance.jpg";
 import hoodieMidnight from "@/assets/p-hoodie-midnight.jpg";
 import hoodieScript from "@/assets/p-hoodie-script.jpg";
+import crewBanner from "@/assets/vice-crew-banner.jpg";
 
 export type Color = { name: string; hex: string };
 export type Product = {
@@ -61,7 +62,17 @@ export const products: Product[] = [
   { id: "d-23", name: "Twenty Three Tee", price: 32, images: [lastDance], colors: [GREY], sizes: TEE_SIZES, category: "tee", type: "drop", dropName: "Night Shift", inStock: true, badge: "Drop" },
 ];
 
-export type Drop = { name: string; tagline: string; cover: string };
+export type Drop = { name: string; tagline: string; cover: string; endsAt?: string | null; archived?: boolean };
+/** A drop is closed once its timer has passed: shown blurred and not shoppable. */
+export const dropClosed = (d: Drop, now = Date.now()) => !!d.endsAt && new Date(d.endsAt).getTime() <= now;
+export const visibleDrops = () => drops.filter((d) => !d.archived);
+
+/** Homepage sections created from the dashboard. Products join one through type "section:<name>". */
+export type CustomSection = { name: string; showInNav: boolean; title?: string; eyebrow?: string; description?: string };
+export const customSections: CustomSection[] = [];
+/** Full-width homepage banner photos (managed in /admin → Banners). Empty list hides the section. */
+export const banners: string[] = ["asset:crew"];
+export const sectionAnchor = (name: string) => `section-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 // Sample drops (placeholders) — edit names, descriptions and cover photos freely.
 export const drops: Drop[] = [
   { name: "Night Shift", tagline: "Made for the hours after midnight.", cover: cap },
@@ -84,10 +95,11 @@ export const getProduct = (id: string) => products.find((p) => p.id === id);
 // ---- Live catalog: products & bundles are managed from /admin and loaded from the database.
 // The arrays above are the offline fallback; they're replaced in place once the database answers.
 import { useSyncExternalStore } from "react";
-import { supabase } from "@/lib/store-db";
+import { supabase } from "@/integrations/supabase/client";
+import { storeClient } from "@/lib/store-client";
 
 export const ASSET_IMAGES: Record<string, string> = {
-  nysc, cap, sakura, lastdance: lastDance, "hoodie-midnight": hoodieMidnight, "hoodie-script": hoodieScript,
+  nysc, cap, sakura, lastdance: lastDance, "hoodie-midnight": hoodieMidnight, "hoodie-script": hoodieScript, crew: crewBanner,
 };
 export const resolveImage = (s: string) => (s.startsWith("asset:") ? ASSET_IMAGES[s.slice(6)] ?? "" : s);
 
@@ -98,10 +110,16 @@ const subs = new Set<() => void>();
 export function loadCatalog(force = false): Promise<void> {
   if (loading && !force) return loading;
   loading = (async () => {
-    const [pr, br] = await Promise.all([
+    const [pr, br, st] = await Promise.all([
       supabase.from("products").select("*").order("sort").order("created_at"),
       supabase.from("bundles").select("*").order("sort").order("created_at"),
+      storeClient.from("store_settings").select("key,value").in("key", ["drops_json", "sections_json", "banners_json"]),
     ]);
+    const m = Object.fromEntries((st.data ?? []).map((r) => [r.key, r.value]));
+    try { if (m["drops_json"]) drops.splice(0, drops.length, ...(JSON.parse(m["drops_json"]) as Drop[]).map((d) => ({ ...d, cover: resolveImage(d.cover) }))); } catch { /* keep samples */ }
+    try { if (m["sections_json"]) customSections.splice(0, customSections.length, ...(JSON.parse(m["sections_json"]) as CustomSection[])); } catch { /* ignore */ }
+    try { if (m["banners_json"] != null) banners.splice(0, banners.length, ...(JSON.parse(m["banners_json"]) as string[])); } catch { /* ignore */ }
+    if (st.data?.length) { version++; subs.forEach((f) => f()); }
     // An empty online catalog keeps the sample products below so the shop never looks blank.
     if (pr.error || br.error || !pr.data || pr.data.length === 0) return;
     products.splice(0, products.length, ...pr.data.map((r) => ({
