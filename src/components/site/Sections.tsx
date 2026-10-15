@@ -50,7 +50,6 @@ export function ProductCard({ p }: { p: Product }) {
   const soon = !!p.comingSoon;
   return (
     <article className="group glass relative flex flex-col border border-border">
-      <FavoriteButton productId={p.id} className="absolute right-3 top-3 z-10" />
       <Link to="/product/$id" params={{ id: p.id }} className="relative block aspect-[4/5] overflow-hidden">
         <img src={p.images[0]} alt={p.name} loading="lazy" width={768} height={960} className={`h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 ${soon ? "scale-110 blur-[7px]" : ""}`} />
         <div className="absolute left-3 top-3 flex flex-col items-start gap-1">
@@ -62,7 +61,10 @@ export function ProductCard({ p }: { p: Product }) {
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-2">
           <h3 className="min-w-0 break-words text-sm font-medium uppercase tracking-wide"><Link to="/product/$id" params={{ id: p.id }} className="hover:text-primary">{p.name}</Link></h3>
-          <PriceTag p={p} className="shrink-0 text-sm" />
+          <div className="flex shrink-0 flex-col items-end gap-1.5">
+            <PriceTag p={p} className="text-sm" />
+            <FavoriteButton productId={p.id} />
+          </div>
         </div>
         <RatingStars productId={p.id} compact />
         <div className="flex gap-1.5">
