@@ -408,15 +408,14 @@ function Line({ l }: { l: CartLine }) {
               );
             })}
           </div>
-          <div className="mt-3 grid grid-cols-[2.75rem_1fr_2.75rem] items-stretch border border-foreground/70">
-            <button onClick={() => cart.setQty(l.key, l.qty - 1)} disabled={l.qty <= 1} className="h-12 border-r border-border text-base transition hover:bg-foreground hover:text-background disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-foreground" aria-label="Less">−</button>
-            <div className="flex flex-col items-center justify-center">
-              <span key={l.qty} className="font-display text-xl font-semibold leading-none tabular-nums animate-in fade-in slide-in-from-bottom-1">{String(l.qty).padStart(2, "0")}</span>
-              <span className="mt-1 text-[9px] uppercase tracking-[.3em] text-muted-foreground">{l.qty === 1 ? "Piece" : "Pieces"}</span>
+          <div className="mt-3 flex items-center justify-between">
+            <div className="inline-flex h-8 items-center rounded-full border border-border bg-foreground/5">
+              <button onClick={() => cart.setQty(l.key, l.qty - 1)} disabled={l.qty <= 1} className="grid h-8 w-8 place-items-center rounded-full text-sm transition hover:bg-foreground/10 disabled:opacity-30" aria-label="Less">−</button>
+              <span key={l.qty} className="w-6 text-center text-xs font-semibold tabular-nums animate-in fade-in zoom-in-75">{l.qty}</span>
+              <button onClick={() => cart.setQty(l.key, Math.min(10, l.qty + 1))} disabled={l.qty >= 10} className="grid h-8 w-8 place-items-center rounded-full text-sm transition hover:bg-foreground/10 disabled:opacity-30" aria-label="More">+</button>
             </div>
-            <button onClick={() => cart.setQty(l.key, Math.min(10, l.qty + 1))} disabled={l.qty >= 10} className="h-12 border-l border-border text-base transition hover:bg-foreground hover:text-background disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-foreground" aria-label="More">+</button>
+            <button onClick={() => cart.remove(l.key)} className="text-[11px] uppercase tracking-[.2em] text-muted-foreground hover:text-primary">Remove</button>
           </div>
-          <button onClick={() => cart.remove(l.key)} className="mt-2 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">Remove</button>
         </div>
       </div>
     </li>

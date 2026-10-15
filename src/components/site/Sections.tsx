@@ -49,7 +49,8 @@ export function ProductCard({ p }: { p: Product }) {
   const available = p.inStock && !p.comingSoon;
   const soon = !!p.comingSoon;
   return (
-    <article className="group glass flex flex-col border border-border">
+    <article className="group glass relative flex flex-col border border-border">
+      <FavoriteButton productId={p.id} className="absolute right-3 top-3 z-10" />
       <Link to="/product/$id" params={{ id: p.id }} className="relative block aspect-[4/5] overflow-hidden">
         <img src={p.images[0]} alt={p.name} loading="lazy" width={768} height={960} className={`h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 ${soon ? "scale-110 blur-[7px]" : ""}`} />
         <div className="absolute left-3 top-3 flex flex-col items-start gap-1">
@@ -57,7 +58,6 @@ export function ProductCard({ p }: { p: Product }) {
           {p.badge && <span className=" bg-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] text-primary-foreground">{p.badge}</span>}
         </div>
         {!available && <span className="absolute bottom-3 right-3 bg-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] text-primary-foreground">{soon ? "Soon" : "Sold out"}</span>}
-        <FavoriteButton productId={p.id} className="absolute right-3 top-3" />
       </Link>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-2">
