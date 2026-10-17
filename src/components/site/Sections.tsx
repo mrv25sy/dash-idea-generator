@@ -2,7 +2,7 @@ import { Link, useLocation } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cart } from "@/lib/cart";
 import { CURRENCY, DROP_ACTIVE, ORDERING_ENABLED, INSTAGRAM_URL, WHATSAPP_CHANNEL_URL } from "@/config";
-import { visibleDrops, customSections, banners, resolveImage, sectionAnchor, bundles, getProduct, products, singleCategories, onSale, finalPrice, backImage, type Product, type BannerPlacement, type BannerSize } from "@/data/products";
+import { instaGallery, visibleDrops, customSections, banners, resolveImage, sectionAnchor, bundles, getProduct, products, singleCategories, onSale, finalPrice, backImage, type Product, type BannerPlacement, type BannerSize } from "@/data/products";
 import { DropsCarousel } from "./DropsCarousel";
 import { RatingStars } from "./RatingStars";
 import { FavoriteButton } from "./FavoriteButton";
@@ -274,6 +274,23 @@ export function CommunitySection() {
           </div>
         </div>
       </FadeUp>
+    </section>
+  );
+}
+
+export function InstagramSection() {
+  const { enabled, title, posts } = instaGallery;
+  if (!enabled || posts.length === 0) return null;
+  return (
+    <section id="instagram" className="mx-auto max-w-7xl px-5 py-16 md:px-8">
+      <h2 className="mb-8 text-center font-display text-3xl font-semibold uppercase tracking-tight md:text-4xl">{title}</h2>
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+        {posts.map((p, i) => (
+          <a key={p.src + i} href={p.href || INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="group block overflow-hidden bg-muted">
+            <img src={p.src} alt={`Vice on Instagram ${i + 1}`} loading="lazy" className="aspect-square w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+          </a>
+        ))}
+      </div>
     </section>
   );
 }
