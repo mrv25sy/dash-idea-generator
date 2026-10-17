@@ -121,6 +121,14 @@ CREATE TABLE public.orders (
   created_at timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX orders_user_id_idx ON public.orders(user_id);
+
+-- Sequential order codes: #VC-101, #VC-102, ... Postgres sequences never hand out the same number twice.
+CREATE SEQUENCE IF NOT EXISTS public.order_code_seq START 101;
+CREATE UNIQUE INDEX IF NOT EXISTS orders_order_code_key ON public.orders(order_code);
+CREATE OR REPLACE FUNCTION public.next_order_code() RETURNS text
+LANGUAGE sql VOLATILE SECURITY DEFINER SET search_path = public AS
+$$ SELECT '#VC-' || nextval('public.order_code_seq')::text $$;
+GRANT EXECUTE ON FUNCTION public.next_order_code() TO anon, authenticated;
 GRANT INSERT ON public.orders TO anon;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.orders TO authenticated;
 GRANT ALL ON public.orders TO service_role;
