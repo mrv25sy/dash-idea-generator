@@ -239,3 +239,50 @@ export function BannersTab() {
     </div>
   );
 }
+
+type Insta = { enabled: boolean; title: string; posts: { src: string; href?: string }[] };
+export function InstagramTab() {
+  const [g, setG] = useState<Insta | null>(null);
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { readSetting<Insta>("instagram_json", { enabled: true, title: "As seen on Instagram", posts: [] }).then(setG); }, []);
+  if (!g) return <p className="text-sm text-muted-foreground">Loading…</p>;
+  const stage = (patch: Partial<Insta>) => { setG({ ...g, ...patch }); setMsg("Unsaved changes"); };
+  const save = async () => { setBusy(true); setMsg((await writeSetting("instagram_json", g)) || "Saved — website updated."); setBusy(false); };
+  const upload = async (files: FileList | null) => {
+    if (!files?.length) return;
+    setBusy(true);
+    const added: Insta["posts"] = [];
+    for (const f of Array.from(files)) {
+      const path = `instagram/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${f.name.split(".").pop()}`;
+      const up = await supabase.storage.from("product-images").upload(path, f, { contentType: f.type });
+      if (up.error) { setMsg(up.error.message); continue; }
+      const { data } = await supabase.storage.from("product-images").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+      if (data?.signedUrl) added.push({ src: data.signedUrl });
+    }
+    setBusy(false);
+    stage({ posts: [...g.posts, ...added] });
+  };
+  const updPost = (i: number, href: string) => stage({ posts: g.posts.map((p, j) => (j === i ? { ...p, href } : p)) });
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">Photo row at the bottom of the homepage. Each photo can link to its Instagram post.</p>
+      <div className="flex flex-wrap items-center gap-4">
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={g.enabled} onChange={(e) => stage({ enabled: e.target.checked })} /> Show on website</label>
+        <label className="btn btn-ghost inline-flex cursor-pointer">{busy ? "Uploading…" : "+ Add photos"}<input type="file" accept="image/*" multiple className="hidden" disabled={busy} onChange={(e) => { void upload(e.target.files); e.target.value = ""; }} /></label>
+        <button className="btn btn-primary disabled:opacity-50" disabled={busy} onClick={save}>Save changes</button>
+      </div>
+      <div><label className={label}>Title</label><input className={input} value={g.title} onChange={(e) => stage({ title: e.target.value })} /></div>
+      <div className="grid gap-3 grid-cols-2 md:grid-cols-4">
+        {g.posts.map((p, i) => (
+          <div key={p.src + i} className="border border-border p-2">
+            <img src={p.src} alt="" className="aspect-square w-full object-cover" />
+            <input className={`${input} mt-2 h-9 text-xs`} placeholder="Instagram post link (optional)" value={p.href ?? ""} onChange={(e) => updPost(i, e.target.value)} />
+            <button className="btn btn-ghost mt-2 h-8 w-full text-[10px]" onClick={() => stage({ posts: g.posts.filter((_, j) => j !== i) })}>Remove</button>
+          </div>
+        ))}
+      </div>
+      {msg && <p className="text-sm text-primary">{msg}</p>}
+    </div>
+  );
+}

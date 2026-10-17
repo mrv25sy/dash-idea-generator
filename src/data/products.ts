@@ -71,6 +71,9 @@ export type Banner = { src: string; placement: BannerPlacement; title?: string; 
 export const toBanner = (b: string | Banner): Banner => (typeof b === "string" ? { src: b, placement: "after-drops" } : { ...b, placement: b.placement || "after-drops" });
 /** Full-width homepage banners (managed in /admin → Banners). */
 export const banners: Banner[] = [];
+/** "As seen on Instagram" gallery (managed in /admin → Instagram). */
+export type InstaPost = { src: string; href?: string };
+export const instaGallery: { enabled: boolean; title: string; posts: InstaPost[] } = { enabled: true, title: "As seen on Instagram", posts: [] };
 export const sectionAnchor = (name: string) => `section-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 export const drops: Drop[] = [];
 export const activeDrop = drops[0];
@@ -119,12 +122,13 @@ export function loadCatalog(force = false): Promise<void> {
     const [pr, br, st] = await Promise.all([
       supabase.from("products").select("*").order("sort").order("created_at"),
       supabase.from("bundles").select("*").order("sort").order("created_at"),
-      storeClient.from("store_settings").select("key,value").in("key", ["drops_json", "sections_json", "banners_json"]),
+      storeClient.from("store_settings").select("key,value").in("key", ["drops_json", "sections_json", "banners_json", "instagram_json"]),
     ]);
     const m = Object.fromEntries((st.data ?? []).map((r) => [r.key, r.value]));
     try { if (m["drops_json"]) drops.splice(0, drops.length, ...(JSON.parse(m["drops_json"]) as Drop[]).map((d) => ({ ...d, cover: resolveImage(d.cover) }))); } catch { /* keep samples */ }
     try { if (m["sections_json"]) customSections.splice(0, customSections.length, ...(JSON.parse(m["sections_json"]) as CustomSection[])); } catch { /* ignore */ }
     try { if (m["banners_json"] != null) banners.splice(0, banners.length, ...(JSON.parse(m["banners_json"]) as (string | Banner)[]).map(toBanner)); } catch { /* ignore */ }
+    try { if (m["instagram_json"]) Object.assign(instaGallery, JSON.parse(m["instagram_json"])); } catch { /* ignore */ }
     if (st.data?.length) { version++; subs.forEach((f) => f()); }
     // An empty online catalog keeps the sample products below so the shop never looks blank.
     if (pr.error || !pr.data) { version++; subs.forEach((f) => f()); return; }
