@@ -16,7 +16,7 @@ function FadeUp({ children, className = "" }: { children: ReactNode; className?:
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const io = new IntersectionObserver((entries) => { if (entries[0]?.isIntersecting) { setShown(true); io.disconnect(); } }, { threshold: 0.12 });
+    const io = new IntersectionObserver((entries) => { if (entries[0]?.isIntersecting) { setShown(true); io.disconnect(); } }, { rootMargin: "0px 0px 60% 0px", threshold: 0 });
     io.observe(el);
     return () => io.disconnect();
   }, []);
