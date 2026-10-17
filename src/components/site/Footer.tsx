@@ -7,6 +7,21 @@ const WHATSAPP_CHAT = `https://wa.me/${PHONE_NUMBER.replace(/\D/g, "")}?text=${e
 export function Footer() {
   const [shipOpen, setShipOpen] = useState(false);
   return (
+    <>
+    <section aria-label="Store info" className="border-t border-border">
+      <div className="mx-auto grid max-w-7xl gap-8 px-5 py-10 text-center sm:grid-cols-3 md:px-8">
+        {[
+          ["Ships within 10–12 days", "To all Syrian governorates"],
+          ["Quality checked", "Every piece inspected before shipping"],
+          ["No returns", "All sales are final"],
+        ].map(([t, s]) => (
+          <div key={t}>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.12em]">{t}</h3>
+            <p className="mt-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{s}</p>
+          </div>
+        ))}
+      </div>
+    </section>
     <footer className="relative overflow-hidden border-t border-border pt-10">
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 md:flex-row md:items-center md:justify-between md:px-8">
         <Logo className="h-9 w-5 shrink-0" />
@@ -39,5 +54,6 @@ export function Footer() {
       <p className="mx-auto mt-8 max-w-7xl px-5 text-[11px] uppercase tracking-[0.3em] text-muted-foreground md:px-8">© {new Date().getFullYear()} Vice. Street calls, we answer.</p>
       <div aria-hidden className="wordmark">VICE</div>
     </footer>
+    </>
   );
 }
