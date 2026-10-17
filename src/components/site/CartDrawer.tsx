@@ -164,7 +164,10 @@ export function CartDrawer() {
     if (busy) return;
     if (!receipt) return setPayErr("Upload your payment screenshot first — orders without a receipt are not held.");
     setBusy(true);
-    const id = `#VC-${Math.floor(1000 + Math.random() * 9000)}`;
+    // The database hands out the next number (#VC-101, #VC-102, ...) atomically.
+    const { data: code, error: codeErr } = await (storeClient.rpc as any)("next_order_code");
+    if (codeErr || typeof code !== "string") { setBusy(false); return setPayErr("Couldn't place the order, please try again."); }
+    const id = code;
     const items = s.lines.map((l) => l.kind === "bundle" ? `${bundles.find((b) => b.id === l.bundleId)?.name ?? "Bundle"} × ${l.qty}` : `${getProduct(l.pieces[0]?.productId ?? "")?.name} (${l.pieces[0]?.size}) × ${l.qty}`);
     const { data: authUser } = await supabase.auth.getUser();
     const { error } = await storeClient.from("orders").insert({
