@@ -45,22 +45,7 @@ export const singleCategories: { category: string; label: string }[] = [
   { category: "cap", label: "Caps" },
 ];
 
-export const products: Product[] = [
-  { id: "ny-soul-club", name: "New York Soul Club Tee", price: 25, images: [nysc], colors: [BLACK, WHITE], sizes: TEE_SIZES, category: "tee", type: "single", inStock: true, badge: "New" },
-  { id: "extraordinary-cap", name: "Extraordinary Cap", price: 15, images: [cap], colors: [BLACK, RED], sizes: ["One size"], category: "cap", type: "single", inStock: true },
-  { id: "sakura-tee", name: "Sakura Tee", price: 27, images: [sakura], colors: [WHITE, BLACK], sizes: TEE_SIZES, category: "tee", type: "single", inStock: false },
-  { id: "last-dance-tee", name: "The Last Dance Tee", price: 28, images: [lastDance], colors: [GREY, BLACK], sizes: TEE_SIZES, category: "tee", type: "single", inStock: true },
-  { id: "after-midnight-hoodie", name: "After Midnight Hoodie", price: 45, images: [hoodieMidnight], colors: [BLACK, GREY], sizes: HOODIE_SIZES, category: "hoodie", type: "single", inStock: true, badge: "New" },
-  { id: "vice-script-hoodie", name: "Vice Script Hoodie", price: 48, images: [hoodieScript], colors: [GREY, BLACK], sizes: HOODIE_SIZES, category: "hoodie", type: "single", inStock: true, salePrice: 40, description: "Charcoal hoodie with red Vice script embroidery." },
-  { id: "night-runner-hoodie", name: "Night Runner Hoodie", price: 50, images: [hoodieMidnight], colors: [BLACK], sizes: ["M", "L", "XL"], category: "hoodie", type: "single", inStock: true, comingSoon: true, description: "Oversized hoodie, arriving soon." },
-  { id: "street-signal-tee", name: "Street Signal Tee", price: 22, images: [nysc], colors: [WHITE], sizes: ["S", "M", "L", "XL"], category: "tee", type: "single", inStock: true, description: "Everyday tee with a small chest logo." },
-  { id: "crimson-dad-cap", name: "Crimson Dad Cap", price: 14, images: [cap], colors: [RED], sizes: ["One size"], category: "cap", type: "single", inStock: true, salePrice: 11, description: "Unstructured washed cap." },
-  // Drop pieces
-  { id: "d-soul-night", name: "Soul Night Tee", price: 30, images: [nysc], colors: [BLACK], sizes: TEE_SIZES, category: "tee", type: "drop", dropName: "Night Shift", inStock: true, badge: "Drop" },
-  { id: "d-crimson-cap", name: "Crimson Script Cap", price: 18, images: [cap], colors: [BLACK, RED], sizes: ["One size"], category: "cap", type: "drop", dropName: "Night Shift", inStock: true, badge: "Drop" },
-  { id: "d-bloom", name: "Bloom Back Tee", price: 32, images: [sakura], colors: [WHITE], sizes: TEE_SIZES, category: "tee", type: "drop", dropName: "Night Shift", inStock: false, comingSoon: true },
-  { id: "d-23", name: "Twenty Three Tee", price: 32, images: [lastDance], colors: [GREY], sizes: TEE_SIZES, category: "tee", type: "drop", dropName: "Night Shift", inStock: true, badge: "Drop" },
-];
+export const products: Product[] = [];
 
 export type Drop = { name: string; tagline: string; cover: string; endsAt?: string | null; archived?: boolean };
 /** A drop is closed once its timer has passed: shown blurred and not shoppable. */
@@ -85,23 +70,13 @@ export type Banner = { src: string; placement: BannerPlacement; title?: string; 
 /** Older saves stored plain image URLs; treat them as banners under Current drops. */
 export const toBanner = (b: string | Banner): Banner => (typeof b === "string" ? { src: b, placement: "after-drops" } : { ...b, placement: b.placement || "after-drops" });
 /** Full-width homepage banners (managed in /admin → Banners). */
-export const banners: Banner[] = [{ src: "asset:crew", placement: "after-drops" }];
+export const banners: Banner[] = [];
 export const sectionAnchor = (name: string) => `section-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
-// Sample drops (placeholders) — edit names, descriptions and cover photos freely.
-export const drops: Drop[] = [
-  { name: "Night Shift", tagline: "Made for the hours after midnight.", cover: cap },
-  { name: "Sakura Season", tagline: "Soft blooms, loud streets. A spring capsule.", cover: sakura },
-  { name: "The Last Dance", tagline: "A tribute to the legends of the court.", cover: lastDance },
-  { name: "After Hours", tagline: "Heavyweight hoodies for cold city nights.", cover: hoodieMidnight },
-];
+export const drops: Drop[] = [];
 export const activeDrop = drops[0];
 
 export type Bundle = { id: string; name: string; productIds: string[]; price: number };
-export const bundles: Bundle[] = [
-  { id: "soul-fit", name: "The Soul Fit", productIds: ["ny-soul-club", "extraordinary-cap"], price: 34 },
-  { id: "court-fit", name: "The Court Fit", productIds: ["last-dance-tee", "extraordinary-cap"], price: 37 },
-  { id: "full-fit", name: "The Full Rotation", productIds: ["ny-soul-club", "last-dance-tee", "extraordinary-cap"], price: 58 },
-];
+export const bundles: Bundle[] = [];
 
 
 export const getProduct = (id: string) => products.find((p) => p.id === id);
@@ -152,7 +127,7 @@ export function loadCatalog(force = false): Promise<void> {
     try { if (m["banners_json"] != null) banners.splice(0, banners.length, ...(JSON.parse(m["banners_json"]) as (string | Banner)[]).map(toBanner)); } catch { /* ignore */ }
     if (st.data?.length) { version++; subs.forEach((f) => f()); }
     // An empty online catalog keeps the sample products below so the shop never looks blank.
-    if (pr.error || br.error || !pr.data || pr.data.length === 0) return;
+    if (pr.error || !pr.data) { version++; subs.forEach((f) => f()); return; }
     products.splice(0, products.length, ...pr.data.map((r) => ({
       id: r.id, name: r.name, price: Number(r.price),
       images: (r.images ?? []).map(resolveImage).filter(Boolean),
@@ -161,7 +136,7 @@ export function loadCatalog(force = false): Promise<void> {
       dropName: r.drop_name ?? undefined, inStock: r.in_stock, comingSoon: r.coming_soon, badge: r.badge ?? undefined,
       description: r.description ?? undefined, details: (r.details as { label: string; value: string }[]) ?? [], salePrice: r.sale_price == null ? undefined : Number(r.sale_price),
     })));
-    if (br.data?.length) bundles.splice(0, bundles.length, ...br.data.map((b) => ({ id: b.id, name: b.name, productIds: b.product_ids ?? [], price: Number(b.price) })));
+    if (br.data) bundles.splice(0, bundles.length, ...br.data.map((b) => ({ id: b.id, name: b.name, productIds: b.product_ids ?? [], price: Number(b.price) })));
     version++;
     subs.forEach((f) => f());
   })().catch(() => {});
@@ -171,3 +146,6 @@ export function loadCatalog(force = false): Promise<void> {
 export function useCatalogVersion() {
   return useSyncExternalStore((f) => { subs.add(f); return () => subs.delete(f); }, () => version, () => 0);
 }
+
+// Start fetching the live catalog as soon as the site opens in the browser.
+if (typeof window !== "undefined") void loadCatalog();
