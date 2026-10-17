@@ -14,36 +14,7 @@ export type Database = {
   }
   public: {
     Tables: {
-      goals: {
-        Row: {
-          created_at: string
-          done: boolean
-          id: string
-          note: string | null
-          target_date: string | null
-          title: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          done?: boolean
-          id?: string
-          note?: string | null
-          target_date?: string | null
-          title: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          done?: boolean
-          id?: string
-          note?: string | null
-          target_date?: string | null
-          title?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never

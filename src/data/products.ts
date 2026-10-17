@@ -70,8 +70,22 @@ export const visibleDrops = () => drops.filter((d) => !d.archived);
 /** Homepage sections created from the dashboard. Products join one through type "section:<name>". */
 export type CustomSection = { name: string; showInNav: boolean; title?: string; eyebrow?: string; description?: string };
 export const customSections: CustomSection[] = [];
-/** Full-width homepage banner photos (managed in /admin → Banners). Empty list hides the section. */
-export const banners: string[] = ["asset:crew"];
+/** Where a banner sits on the homepage. Banners sharing a spot slide together. */
+export const BANNER_PLACEMENTS = [
+  { id: "after-hero", label: "Under the top intro" },
+  { id: "after-drops", label: "Under Current drops" },
+  { id: "after-singles", label: "Under Singles" },
+  { id: "after-sections", label: "Under custom sections" },
+  { id: "after-bundles", label: "Under Get the Fit" },
+  { id: "after-community", label: "At the bottom" },
+] as const;
+export type BannerPlacement = (typeof BANNER_PLACEMENTS)[number]["id"];
+export type BannerSize = "s" | "m" | "l" | "xl";
+export type Banner = { src: string; placement: BannerPlacement; title?: string; titleSize?: BannerSize; subtitle?: string };
+/** Older saves stored plain image URLs; treat them as banners under Current drops. */
+export const toBanner = (b: string | Banner): Banner => (typeof b === "string" ? { src: b, placement: "after-drops" } : { ...b, placement: b.placement || "after-drops" });
+/** Full-width homepage banners (managed in /admin → Banners). */
+export const banners: Banner[] = [{ src: "asset:crew", placement: "after-drops" }];
 export const sectionAnchor = (name: string) => `section-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
 // Sample drops (placeholders) — edit names, descriptions and cover photos freely.
 export const drops: Drop[] = [
@@ -92,6 +106,18 @@ export const bundles: Bundle[] = [
 
 export const getProduct = (id: string) => products.find((p) => p.id === id);
 
+/** Photo names are stored in the image URL fragment: "<url>#name=Back view". */
+export const imageName = (src: string) => {
+  const m = /#name=([^#]*)$/.exec(src);
+  return m ? decodeURIComponent(m[1] ?? "") : "";
+};
+export const withImageName = (src: string, name: string) => {
+  const base = src.replace(/#name=[^#]*$/, "");
+  return name.trim() ? `${base}#name=${encodeURIComponent(name.trim())}` : base;
+};
+/** The back-view photo: one named "back", otherwise the second photo. */
+export const backImage = (images: string[]) => images.find((s) => /back/i.test(imageName(s))) ?? images[1];
+
 // ---- Live catalog: products & bundles are managed from /admin and loaded from the database.
 // The arrays above are the offline fallback; they're replaced in place once the database answers.
 import { useSyncExternalStore } from "react";
@@ -101,7 +127,12 @@ import { storeClient } from "@/lib/store-client";
 export const ASSET_IMAGES: Record<string, string> = {
   nysc, cap, sakura, lastdance: lastDance, "hoodie-midnight": hoodieMidnight, "hoodie-script": hoodieScript, crew: crewBanner,
 };
-export const resolveImage = (s: string) => (s.startsWith("asset:") ? ASSET_IMAGES[s.slice(6)] ?? "" : s);
+export const resolveImage = (s: string) => {
+  if (!s.startsWith("asset:")) return s;
+  const [key = "", frag] = s.slice(6).split("#");
+  const url = ASSET_IMAGES[key] ?? "";
+  return url && frag ? `${url}#${frag}` : url;
+};
 
 let version = 0;
 let loading: Promise<void> | null = null;
@@ -118,7 +149,7 @@ export function loadCatalog(force = false): Promise<void> {
     const m = Object.fromEntries((st.data ?? []).map((r) => [r.key, r.value]));
     try { if (m["drops_json"]) drops.splice(0, drops.length, ...(JSON.parse(m["drops_json"]) as Drop[]).map((d) => ({ ...d, cover: resolveImage(d.cover) }))); } catch { /* keep samples */ }
     try { if (m["sections_json"]) customSections.splice(0, customSections.length, ...(JSON.parse(m["sections_json"]) as CustomSection[])); } catch { /* ignore */ }
-    try { if (m["banners_json"] != null) banners.splice(0, banners.length, ...(JSON.parse(m["banners_json"]) as string[])); } catch { /* ignore */ }
+    try { if (m["banners_json"] != null) banners.splice(0, banners.length, ...(JSON.parse(m["banners_json"]) as (string | Banner)[]).map(toBanner)); } catch { /* ignore */ }
     if (st.data?.length) { version++; subs.forEach((f) => f()); }
     // An empty online catalog keeps the sample products below so the shop never looks blank.
     if (pr.error || br.error || !pr.data || pr.data.length === 0) return;
@@ -130,7 +161,7 @@ export function loadCatalog(force = false): Promise<void> {
       dropName: r.drop_name ?? undefined, inStock: r.in_stock, comingSoon: r.coming_soon, badge: r.badge ?? undefined,
       description: r.description ?? undefined, details: (r.details as { label: string; value: string }[]) ?? [], salePrice: r.sale_price == null ? undefined : Number(r.sale_price),
     })));
-    bundles.splice(0, bundles.length, ...(br.data ?? []).map((b) => ({ id: b.id, name: b.name, productIds: b.product_ids ?? [], price: Number(b.price) })));
+    if (br.data?.length) bundles.splice(0, bundles.length, ...br.data.map((b) => ({ id: b.id, name: b.name, productIds: b.product_ids ?? [], price: Number(b.price) })));
     version++;
     subs.forEach((f) => f());
   })().catch(() => {});

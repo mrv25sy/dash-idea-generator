@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/lib/store-client";
 import { storeClient } from "@/lib/store-client";
 import { PAYMENT_ADDRESS, PAYMENT_NAME } from "@/config";
-import qrAsset from "@/assets/payment-qr.jpg.asset.json";
+import qrAsset from "@/assets/payment-qr-souha.jpg.asset.json";
 
 export type StoreSettings = { paymentName: string; paymentAddress: string; qrUrl: string };
 const fallback: StoreSettings = { paymentName: PAYMENT_NAME, paymentAddress: PAYMENT_ADDRESS, qrUrl: qrAsset.url };

@@ -37,8 +37,8 @@ export function InboxButton() {
         {unread > 0 && <span className="absolute -right-0.5 -top-0.5 grid h-4 min-w-4 place-items-center bg-primary px-1 text-[10px] font-semibold text-primary-foreground">{unread}</span>}
       </button>
       {open && <div className="fixed inset-0 z-50 bg-background/60 backdrop-blur-sm" onClick={() => setOpen(false)} />}
-      <aside role="dialog" aria-label="Inbox" aria-hidden={!open}
-        className={`fixed right-0 top-0 z-50 flex h-[100dvh] w-full max-w-md flex-col border-l border-border bg-background transition-transform duration-300 ${open ? "translate-x-0" : "translate-x-full"}`}>
+      {open && <aside role="dialog" aria-label="Inbox"
+        className="fixed right-0 top-0 z-50 flex h-[100dvh] w-full max-w-md flex-col border-l border-border bg-background animate-in slide-in-from-right duration-300">
         <header className="flex h-16 shrink-0 items-center justify-between border-b border-border px-5">
           <h2 className="font-display text-sm font-semibold uppercase tracking-[.2em]">Inbox {unread > 0 && <span className="ml-2 bg-primary px-2 py-0.5 text-[10px] text-primary-foreground">{unread} new</span>}</h2>
           <div className="flex items-center gap-3">
@@ -67,7 +67,7 @@ export function InboxButton() {
             </ul>
           )}
         </div>
-      </aside>
+      </aside>}
     </>
   );
 }

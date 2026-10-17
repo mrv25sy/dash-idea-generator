@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { CURRENCY, ORDERING_ENABLED, PHONE_NUMBER } from "@/config";
 import { useStoreSettings } from "@/lib/store-settings";
+import { ReceiptPrinter, type ReceiptOrder } from "@/components/site/ReceiptPrinter";
 
 type PastOrder = { id: string; date: string; total: number; items: string[]; status: string };
 const HISTORY_KEY = "vice-order-history";
@@ -57,7 +58,8 @@ export function CartDrawer() {
   const [errors, setErrors] = useState<Partial<Record<keyof Customer | "sizes", string>>>({});
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState<PastOrder[]>([]);
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState("");
+  const [printing, setPrinting] = useState<ReceiptOrder | null>(null);
   const [hidden, setHidden] = useState<string[]>([]);
   const [showHidden, setShowHidden] = useState(false);
   useEffect(() => { try { setHidden(JSON.parse(localStorage.getItem("vice-user-archived-orders") || "[]")); } catch { /* ignore */ } }, []);
@@ -176,8 +178,10 @@ export function CartDrawer() {
     });
     if (error) { setBusy(false); return setPayErr("Couldn't place the order, please try again."); }
     setSentNote("Order placed with your receipt. We'll confirm it soon — watch the status here.");
-    const next = [{ id, date: new Date().toISOString(), total: subtotal, items, status: "Pending" }, ...history];
+    const placed = { id, date: new Date().toISOString(), total: subtotal, items, status: "Pending" };
+    const next = [placed, ...history];
     setHistory(next); saveHistory(next);
+    setPrinting({ ...placed, name: form.name.trim() });
     cart.clearAfterOrder();
     setReceipt("");
     setStep("history");
@@ -209,7 +213,8 @@ export function CartDrawer() {
           ) : (
             <div className="flex items-center gap-4">
               <h2 className="font-display text-sm font-semibold uppercase tracking-[.2em]">Your cart</h2>
-              <button onClick={() => { setSentNote(""); setStep("history"); }} className="nav-link hover:text-foreground">My orders{history.length ? ` (${history.length})` : ""}</button>
+              <button onClick={() => { setSentNote(""); setShowHidden(false); setStep("history"); }} className="nav-link hover:text-foreground">My orders</button>
+              <button onClick={() => { setSentNote(""); setShowHidden(true); setStep("history"); }} className="nav-link hover:text-foreground">Archived</button>
             </div>
           )}
           <button onClick={cart.close} aria-label="Close cart" className="icon-btn">✕</button>
@@ -264,12 +269,11 @@ export function CartDrawer() {
               ) : checkedAt ? (
                 <p className="text-[11px] text-muted-foreground">Status checked at {checkedAt}</p>
               ) : null}
-              {history.some((o) => hidden.includes(o.id)) && (
-                <button onClick={() => setShowHidden(!showHidden)} className="text-xs text-muted-foreground underline underline-offset-4">
-                  {showHidden ? "Back to my orders" : `Archived orders (${history.filter((o) => hidden.includes(o.id)).length})`}
-                </button>
-              )}
-              {history.length === 0 ? <p className="text-sm text-muted-foreground">No orders yet.</p> : (
+              <div className="grid grid-cols-2 border border-border text-[11px] font-semibold uppercase tracking-[.2em]">
+                <button onClick={() => setShowHidden(false)} className={`py-2 ${!showHidden ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>My orders ({history.filter((o) => !hidden.includes(o.id)).length})</button>
+                <button onClick={() => setShowHidden(true)} className={`py-2 ${showHidden ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Archived ({history.filter((o) => hidden.includes(o.id)).length})</button>
+              </div>
+              {history.filter((o) => hidden.includes(o.id) === showHidden).length === 0 ? <p className="text-sm text-muted-foreground">{showHidden ? "No archived orders. Archive an order to move it here." : "No orders yet."}</p> : (
                 <ul className="space-y-3">
                   {history.filter((o) => hidden.includes(o.id) === showHidden).map((o) => {
                     const fromDb = live[o.id];
@@ -305,7 +309,10 @@ export function CartDrawer() {
                         </div>
                       )}
                       <div className="flex items-center justify-between border-t border-current/15 px-4 py-2 text-[11px]">
-                        <button onClick={() => toggleHidden(o.id)} className="underline underline-offset-4 opacity-70 hover:opacity-100">{hidden.includes(o.id) ? "Unarchive" : "Archive"}</button>
+                        <span className="flex gap-4">
+                          <button onClick={() => toggleHidden(o.id)} className="underline underline-offset-4 opacity-70 hover:opacity-100">{hidden.includes(o.id) ? "Unarchive" : "Archive"}</button>
+                          <button onClick={() => setPrinting({ ...o, status: st })} className="font-semibold underline underline-offset-4">🧾 Receipt</button>
+                        </span>
                         {canCancel && cancelId !== o.id && <button onClick={() => setCancelId(o.id)} className="font-semibold text-red-700 underline underline-offset-4">Cancel order</button>}
                       </div>
                     </li>
@@ -317,21 +324,61 @@ export function CartDrawer() {
           )}
 
           {step === "pay" && (
-            <div className="space-y-4 text-center">
+            <div className="space-y-5">
               <Steps at={2} />
-              <p className="font-display text-2xl font-semibold">{money(subtotal)}</p>
-              <img src={pay.qrUrl} alt="Payment QR code" className="mx-auto w-56 rounded-lg" />
-              <div className="border border-border p-3 text-left text-sm">
-                <p><span className="text-muted-foreground">Name: </span>{pay.paymentName}</p>
-                <p className="mt-1 break-all"><span className="text-muted-foreground">Address: </span>{pay.paymentAddress}</p>
-                <button onClick={() => { navigator.clipboard?.writeText(pay.paymentAddress); setCopied(true); setTimeout(() => setCopied(false), 1500); }} className="mt-2 text-xs text-primary underline underline-offset-4">{copied ? "Copied!" : "Copy address"}</button>
+              <div className="rounded-2xl border border-border bg-muted p-5 text-center">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Amount to send</p>
+                <p className="mt-1 font-display text-4xl font-bold">{money(subtotal)}</p>
+                <p className="mt-1 text-xs text-muted-foreground">Send this exact amount</p>
               </div>
-              <p className="text-success text-sm font-medium">Pay with the QR code, then upload your payment screenshot. Orders without a receipt are not held.</p>
-              <label className="block cursor-pointer border border-dashed border-border p-4 text-sm">
+              <div className="rounded-2xl border border-border p-4 text-center">
+                <img src={pay.qrUrl} alt="Payment QR code" className="mx-auto w-full max-w-60 rounded-xl" />
+                <button
+                  onClick={async () => {
+                    try {
+                      const blob = await (await fetch(pay.qrUrl)).blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url; a.download = "vice-payment-qr.jpg"; a.click();
+                      setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    } catch { window.open(pay.qrUrl, "_blank"); }
+                  }}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-semibold hover:bg-foreground/5"
+                >
+                  ⬇ Download
+                </button>
+                <p className="mt-3 text-xs text-muted-foreground">{pay.paymentName}</p>
+              </div>
+              <div className="space-y-2">
+                {([["Payment ID", pay.paymentAddress, "addr"]] as const).map(([label, value, key]) => (
+                  <div key={key} className="flex items-center gap-3 rounded-xl border border-border p-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs text-muted-foreground">{label}</p>
+                      <p className="break-all font-mono text-sm font-medium">{value}</p>
+                    </div>
+                    <button
+                      onClick={() => { navigator.clipboard?.writeText(value); setCopied(key); setTimeout(() => setCopied(""), 1500); }}
+                      className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs font-semibold"
+                    >
+                      {copied === key ? "Copied ✓" : "Copy"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <ol className="space-y-2 text-sm">
+                {["Download the QR or copy the address", "Send the exact amount in your payment app", "Upload your payment screenshot below"].map((t, i) => (
+                  <li key={t} className="flex items-center gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-success text-xs font-bold text-success-foreground">{i + 1}</span>
+                    {t}
+                  </li>
+                ))}
+              </ol>
+              <label className="block cursor-pointer rounded-2xl border-2 border-dashed border-border p-5 text-center text-sm">
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => pickReceipt(e.target.files?.[0])} />
-                {receipt ? <img src={receipt} alt="Your receipt" className="mx-auto max-h-48" /> : <span>Tap to upload receipt screenshot</span>}
-                {receipt && <span className="mt-2 block text-xs text-primary underline">Change screenshot</span>}
+                {receipt ? <img src={receipt} alt="Your receipt" className="mx-auto max-h-48 rounded-lg" /> : <span className="block"><span className="block text-2xl">⬆</span><span className="font-semibold">Tap to upload screenshot</span><span className="block text-xs text-muted-foreground">PNG or JPG</span></span>}
+                {receipt && <span className="mt-2 block text-xs text-success underline">Change screenshot</span>}
               </label>
+              <p className="text-center text-xs text-muted-foreground">Orders without a payment screenshot are not held.</p>
               {payErr && <p className="text-xs text-primary">{payErr}</p>}
             </div>
           )}
@@ -373,15 +420,16 @@ export function CartDrawer() {
                 className="btn btn-primary mt-4 w-full"
               >Checkout</button>
             ) : step === "checkout" ? (
-              <button onClick={submit} className="btn btn-primary mt-4 w-full">Pay & Checkout</button>
+              <button onClick={submit} className="btn mt-4 w-full bg-success text-success-foreground hover:opacity-90">Pay & Checkout</button>
             ) : step === "pay" ? (
-              <button onClick={send} disabled={busy || !receipt} className="btn btn-primary mt-4 w-full disabled:opacity-50">
+              <button onClick={send} disabled={busy || !receipt} className="btn mt-4 w-full bg-success text-success-foreground hover:opacity-90 disabled:opacity-50">
                 {busy ? "Placing order…" : "Place order"}
               </button>
             ) : null}
           </footer>
         )}
       </aside>
+      {printing && <ReceiptPrinter order={printing} onClose={() => setPrinting(null)} />}
     </>
   );
 }

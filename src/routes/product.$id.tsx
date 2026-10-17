@@ -2,8 +2,8 @@ import { useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { CURRENCY, INSTAGRAM_URL, ORDERING_ENABLED, WHATSAPP_CHANNEL_URL } from "@/config";
 import { cart } from "@/lib/cart";
-import { getProduct, loadCatalog, onSale, products } from "@/data/products";
-import { PriceTag, ProductCard } from "@/components/site/Sections";
+import { getProduct, imageName, loadCatalog, onSale, products } from "@/data/products";
+import { PriceTag, ProductCard, SoonLock } from "@/components/site/Sections";
 import { RatingStars } from "@/components/site/RatingStars";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { NotFoundView } from "@/components/site/NotFoundView";
@@ -70,13 +70,16 @@ function ProductView() {
         <div>
           <div className="glass relative aspect-[4/5] overflow-hidden border border-border">
             <img src={p.images[img]} alt={p.name} width={768} height={960} className={`h-full w-full object-cover ${soon ? "scale-110 blur-[10px]" : ""}`} />
-            {!available && <span className="absolute right-3 top-3 bg-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] text-primary-foreground">{soon ? "Soon" : "Sold out"}</span>}
+            {soon && <SoonLock big />}
+            {imageName(p.images[img] ?? "") && <span className="absolute bottom-3 left-3 bg-background/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] backdrop-blur">{imageName(p.images[img] ?? "")}</span>}
+            {!available && !soon && <span className="absolute right-3 top-3 bg-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] text-primary-foreground">Sold out</span>}
             {onSale(p) && <span className="absolute left-3 top-3 bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-[.2em] text-destructive-foreground">Sale</span>}
           </div>
-          <div className="mt-3 flex gap-3">
+          <div className="mt-3 flex flex-wrap gap-3">
             {p.images.map((src, i) => (
-              <button key={i} onClick={() => setImg(i)} aria-label={`Image ${i + 1}`} className={`h-20 w-16 overflow-hidden border ${i === img ? "border-primary" : "border-border"}`}>
-                <img src={src} alt="" className={`h-full w-full object-cover ${soon ? "scale-110 blur-[4px]" : ""}`} />
+              <button key={i} onClick={() => setImg(i)} aria-label={imageName(src) || `Image ${i + 1}`} className="flex w-16 flex-col items-center gap-1">
+                <span className={`block h-20 w-16 overflow-hidden border ${i === img ? "border-primary" : "border-border"}`}><img src={src} alt="" className={`h-full w-full object-cover ${soon ? "scale-110 blur-[4px]" : ""}`} /></span>
+                {imageName(src) && <span className="w-full truncate text-center text-[10px] uppercase tracking-wider text-muted-foreground">{imageName(src)}</span>}
               </button>
             ))}
           </div>
@@ -85,12 +88,9 @@ function ProductView() {
         <div className="flex flex-col gap-7">
           <div>
             {p.dropName && <p className="nav-link mb-2 text-primary">{p.dropName}</p>}
-            <div className="flex items-start justify-between gap-4">
-              <h1 className="font-display text-3xl font-semibold uppercase tracking-tight md:text-5xl">{p.name}</h1>
-              <FavoriteButton productId={p.id} className="mt-1 shrink-0" />
-            </div>
+            <h1 className="font-display text-3xl font-semibold uppercase tracking-tight md:text-5xl">{p.name}</h1>
             <p className="mt-3 text-xl"><PriceTag p={p} /></p>
-            <div className="mt-3"><RatingStars productId={p.id} /></div>
+            <div className="mt-3 flex items-center gap-4"><RatingStars productId={p.id} /><FavoriteButton productId={p.id} className="shrink-0" /></div>
             {p.description && <p className="mt-5 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{p.description}</p>}
             {p.details && p.details.length > 0 && (
               <dl className="mt-5 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 border-t border-border pt-4 text-sm">
@@ -147,9 +147,8 @@ function ProductView() {
           ) : !soon ? (
             <button type="button" disabled className="btn btn-ghost w-full opacity-50">Sold out</button>
           ) : (
-            <a href={WHATSAPP_CHANNEL_URL} target="_blank" rel="noopener noreferrer" className="btn btn-primary w-full">Notify me</a>
+            <a href={WHATSAPP_CHANNEL_URL} target="_blank" rel="noopener noreferrer" className="btn btn-primary h-auto min-h-12 w-full flex-col gap-1 py-2"><span>Notify me</span><span className="text-[10px] font-medium normal-case tracking-normal opacity-90">Follow us on the WhatsApp channel</span></a>
           )}
-          {soon && <p className="mt-2 text-center text-[10px] text-muted-foreground">Follow us on the WhatsApp channel</p>}
         </div>
       </div>
 

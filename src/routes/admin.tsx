@@ -4,7 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/store-client";
-import { loadCatalog, resolveImage } from "@/data/products";
+import { imageName, loadCatalog, resolveImage, withImageName } from "@/data/products";
 import { DropsTab, SectionsTab, BannersTab } from "@/components/admin/ContentTabs";
 import { BroadcastTab } from "@/components/admin/BroadcastTab";
 
@@ -100,11 +100,11 @@ function Dashboard({ email }: { email: string }) {
   const [tab, setTab] = useState<"products" | "bundles" | "orders" | "drops" | "sections" | "banners" | "inbox">("orders");
   const [rk, setRk] = useState(0);
   return (
-    <div className="mx-auto max-w-6xl px-5 py-12">
+    <div className="mx-auto w-full max-w-6xl overflow-x-hidden px-4 py-8 sm:px-5 sm:py-12">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
-        <h1 className="font-display text-4xl font-semibold uppercase">Admin</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-xs text-muted-foreground">{email}</span>
+        <h1 className="font-display text-3xl font-semibold uppercase sm:text-4xl">Admin</h1>
+        <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-4">
+          <span className="w-full truncate text-xs text-muted-foreground sm:w-auto">{email}</span>
           <button className="btn btn-primary h-9" onClick={async () => { await loadCatalog(true); setRk((k) => k + 1); }}>↻ Refresh</button>
           <button className="btn btn-ghost h-9" onClick={() => supabase.auth.signOut()}>Sign out</button>
         </div>
@@ -151,13 +151,13 @@ function ProductsTab() {
       <button className="btn btn-primary mb-6" onClick={() => setEditing({ id: "", name: "", price: 0, images: [], colors: [{ name: "Black", hex: "#0d0d0d" }], sizes: ["S", "M", "L", "XL", "XXL"], category: "tee", type: "single", drop_name: null, in_stock: true, coming_soon: false, badge: null, sort: rows.length + 1, description: "", details: [], sale_price: null })}>+ Add design</button>
       <div className="grid gap-3">
         {rows.map((p) => (
-          <div key={p.id} className="glass flex items-center gap-4 border border-border p-3">
+          <div key={p.id} className="glass flex flex-wrap items-center gap-3 border border-border p-3 sm:flex-nowrap sm:gap-4">
             <img src={resolveImage(p.images[0] ?? "")} alt="" className="h-16 w-14 shrink-0 object-cover" />
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 basis-[calc(100%-4.5rem)] sm:basis-auto">
               <p className="truncate text-sm font-medium uppercase">{p.name}</p>
               <p className="text-xs text-muted-foreground">{p.sale_price != null && p.sale_price < p.price ? <><s>${p.price}</s> <b className="text-destructive">${p.sale_price} SALE</b></> : `$${p.price}`} · {p.category} · {p.type}{p.drop_name ? ` (${p.drop_name})` : ""}</p>
             </div>
-            <select value={statusOf(p)} onChange={(e) => setStatus(p, e.target.value)} className="h-9 border border-border bg-background px-2 text-xs">{AVAIL.map((a) => <option key={a.v} value={a.v}>{a.l}</option>)}</select>
+            <select value={statusOf(p)} onChange={(e) => setStatus(p, e.target.value)} className="h-9 flex-1 border border-border bg-background px-2 text-xs sm:flex-none">{AVAIL.map((a) => <option key={a.v} value={a.v}>{a.l}</option>)}</select>
             <button onClick={() => setEditing(p)} className="btn btn-ghost h-9 px-3 text-[10px]">Edit</button>
             <button onClick={() => remove(p)} className="btn btn-ghost h-9 px-3 text-[10px]">Remove</button>
           </div>
@@ -256,7 +256,7 @@ function ProductForm({ initial, onDone }: { initial: ProductRow; onDone: () => v
   };
 
   return (
-    <div className="glass max-w-2xl space-y-4 border border-border p-6">
+    <div className="glass w-full max-w-2xl space-y-4 border border-border p-4 sm:p-6">
       <h2 className="font-display text-2xl font-semibold uppercase">{isNew ? "New design" : "Edit design"}</h2>
       <div className="grid gap-4 sm:grid-cols-2">
         <div><label className={label}>Name</label><input className={input} value={p.name} onChange={(e) => set("name", e.target.value)} /></div>
@@ -305,13 +305,15 @@ function ProductForm({ initial, onDone }: { initial: ProductRow; onDone: () => v
         <label className={label}>Photos</label>
         <div className="flex flex-wrap gap-2">
           {p.images.map((src, i) => (
-            <div key={src + i} className="relative">
-              <img src={resolveImage(src)} alt="" className="h-24 w-20 object-cover" />
+            <div key={i} className="relative w-24">
+              <img src={resolveImage(src)} alt="" className="h-28 w-24 object-cover" />
               <button type="button" onClick={() => set("images", p.images.filter((_, j) => j !== i))} className="absolute right-0 top-0 bg-primary px-1.5 text-xs text-primary-foreground">×</button>
+              <input className="mt-1 h-8 w-full border border-border bg-background px-1 text-[11px] outline-none focus:border-primary" placeholder={i === 1 ? "Back" : "Photo name"} value={imageName(src)} onChange={(e) => set("images", p.images.map((x, j) => (j === i ? withImageName(x, e.target.value) : x)))} />
             </div>
           ))}
         </div>
         <input type="file" accept="image/*" multiple className="mt-3 text-sm" onChange={(e) => upload(e.target.files)} />
+        <p className="mt-1 text-xs text-muted-foreground">Name each photo (e.g. Front, Back, Detail). Names show on the product page. The photo named "Back" (or the 2nd photo) shows when hovering a product on the home page.</p>
       </div>
       {err && <p className="text-sm text-primary">{err}</p>}
       <div className="flex gap-3">
@@ -348,7 +350,7 @@ function BundlesTab() {
   const remove = async (b: BundleRow) => { if (!confirm(`Remove ${b.name}?`)) return; await supabase.from("bundles").delete().eq("id", b.id); after(); };
 
   if (editing) return (
-    <div className="glass max-w-2xl space-y-4 border border-border p-6">
+    <div className="glass w-full max-w-2xl space-y-4 border border-border p-4 sm:p-6">
       <h2 className="font-display text-2xl font-semibold uppercase">{editing.id ? "Edit bundle" : "New bundle"}</h2>
       <div><label className={label}>Name</label><input className={input} value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} /></div>
       <div><label className={label}>Bundle price (USD)</label><input className={input} type="number" min={0} value={editing.price} onChange={(e) => setEditing({ ...editing, price: Number(e.target.value) })} /></div>
@@ -373,7 +375,7 @@ function BundlesTab() {
       <button className="btn btn-primary mb-6" onClick={() => setEditing({ id: "", name: "", product_ids: [], price: 0, sort: rows.length + 1 })}>+ Add bundle</button>
       <div className="grid gap-3">
         {rows.map((b) => (
-          <div key={b.id} className="glass flex items-center gap-4 border border-border p-4">
+          <div key={b.id} className="glass flex flex-wrap items-center gap-3 border border-border p-4 sm:flex-nowrap">
             <div className="min-w-0 flex-1">
               <p className="text-sm font-medium uppercase">{b.name} · <s className="text-muted-foreground">${sumOf(b.product_ids)}</s> <b>${b.price}</b></p>
               <p className="truncate text-xs text-muted-foreground">{b.product_ids.map((id) => prods.find((p) => p.id === id)?.name ?? id).join(" + ")}</p>
@@ -474,7 +476,7 @@ function OrdersTab() {
                 <button onClick={() => removeOrder(o)} className="btn btn-ghost h-9 px-3 text-[10px] text-destructive">Delete</button>
                 </div>
               </div>
-              <div className="mt-3 grid gap-1 text-sm sm:grid-cols-2">
+              <div className="mt-3 grid gap-1 break-words text-sm sm:grid-cols-2">
                 <p><span className="text-muted-foreground">Name:</span> {o.name}</p>
                 <p><span className="text-muted-foreground">Phone:</span> <a className="underline" href={`https://wa.me/${o.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">{o.phone}</a></p>
                 <p><span className="text-muted-foreground">Governorate:</span> {o.governorate}</p>
@@ -482,7 +484,7 @@ function OrdersTab() {
                 {o.notes && <p className="sm:col-span-2"><span className="text-muted-foreground">Notes:</span> {o.notes}</p>}
               </div>
               {receipt ? <a href={receipt} target="_blank" rel="noopener noreferrer" className="mt-3 block"><img src={receipt} alt="Payment receipt" className="max-h-40 border border-border" /><span className="text-xs underline">Payment receipt — open full</span></a> : <p className="mt-3 text-xs text-destructive">No receipt uploaded</p>}
-              <ul className="mt-3 space-y-1 border-t border-border pt-3 text-sm">
+              <ul className="mt-3 space-y-1 break-words border-t border-border pt-3 text-sm">
                 {items.map((it, i) => (
                   <li key={i}>{it.qty} × {it.pieces.map((pc) => `${pc.name} (${[pc.color, pc.size].filter(Boolean).join(", ")})`).join(" + ")} — ${it.unitPrice * it.qty}</li>
                 ))}

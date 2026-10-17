@@ -47,7 +47,7 @@ export function BroadcastTab() {
         <h2 className="nav-link">Sent messages ({msgs.length})</h2>
         {msgs.map((m) => (
           <div key={m.id} className="flex items-start justify-between gap-4 border border-border p-4">
-            <div>
+            <div className="min-w-0 break-words">
               <p className="font-semibold">{m.title} {m.tag && <span className="nav-link ml-2 text-primary">{m.tag}</span>}</p>
               <p className="whitespace-pre-line text-sm">{m.body}</p>
               <p className="mt-1 text-xs text-muted-foreground">{new Date(m.created_at).toLocaleString()}</p>

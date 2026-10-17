@@ -53,6 +53,11 @@ function AuthForm() {
   const [phone, setPhone] = useState("");
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  const [codeStep, setCodeStep] = useState(false);
+  const [code, setCode] = useState("");
+  const saveProfile = async (uid: string) => {
+    await storeClient.from("profiles").upsert({ id: uid, full_name: name.trim() || null, phone: phone.trim() || null, updated_at: new Date().toISOString() }, { onConflict: "id" });
+  };
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setBusy(true); setMsg("");
     if (mode === "in") {
@@ -63,15 +68,36 @@ function AuthForm() {
     }
     const { data, error } = await supabase.auth.signUp({
       email, password: pw,
-      options: { emailRedirectTo: `${window.location.origin}/account`, data: { full_name: name.trim(), phone: phone.trim() } },
+      options: { data: { full_name: name.trim(), phone: phone.trim() } },
     });
-    if (!error && data.session && data.user) {
-      await storeClient.from("profiles").upsert({ id: data.user.id, full_name: name.trim() || null, phone: phone.trim() || null, updated_at: new Date().toISOString() }, { onConflict: "id" });
-    }
+    if (!error && data.session && data.user) await saveProfile(data.user.id);
     setBusy(false);
     if (error) return setMsg(error.message);
-    if (!data.session) setMsg("Account created. Check your email to confirm it, then sign in — your name and phone will be saved.");
+    if (!data.session) { setCodeStep(true); setMsg(`We sent a 6-digit code to ${email}.`); }
   };
+  const verify = async (e: React.FormEvent) => {
+    e.preventDefault(); setBusy(true); setMsg("");
+    const { data, error } = await supabase.auth.verifyOtp({ email, token: code.trim(), type: "signup" });
+    if (!error && data.user) await saveProfile(data.user.id);
+    setBusy(false);
+    if (error) setMsg("That code is wrong or expired. Try again or resend.");
+  };
+  const resend = async () => {
+    const { error } = await supabase.auth.resend({ type: "signup", email });
+    setMsg(error ? error.message : "New code sent.");
+  };
+  if (codeStep) return (
+    <form onSubmit={verify} className="space-y-4 border border-border p-6">
+      <h1 className="font-display text-3xl font-bold uppercase">Confirm your email</h1>
+      <input className={`${input} text-center text-2xl tracking-[.5em]`} inputMode="numeric" autoComplete="one-time-code" maxLength={8} required placeholder="••••••" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
+      {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
+      <button disabled={busy || code.length < 6} className="w-full bg-primary py-3 font-semibold uppercase text-primary-foreground disabled:opacity-60">{busy ? "…" : "Confirm"}</button>
+      <div className="flex justify-between text-sm">
+        <button type="button" onClick={resend} className="text-primary underline">Resend code</button>
+        <button type="button" onClick={() => { setCodeStep(false); setCode(""); setMsg(""); }} className="text-primary underline">Change email</button>
+      </div>
+    </form>
+  );
   return (
     <form onSubmit={submit} className="space-y-4 border border-border p-6">
       <h1 className="font-display text-3xl font-bold uppercase">{mode === "in" ? "Sign in" : "Create account"}</h1>
@@ -112,29 +138,30 @@ function Profile({ session }: { session: Session }) {
   const [saved, setSaved] = useState("");
   const [uploading, setUploading] = useState(false);
   const load = async () => {
-    const [{ data: prof }, { data: ord }] = await Promise.all([
-      storeClient.from("profiles").select("full_name,phone,governorate,address,avatar_url").eq("id", uid).maybeSingle(),
+    const [{ data: prof }, { data: ord }, { data: u }] = await Promise.all([
+      storeClient.from("profiles").select("*").eq("id", uid).maybeSingle(),
       storeClient.from("orders").select("order_code,status,total,created_at").eq("user_id", uid).order("created_at", { ascending: false }),
+      supabase.auth.getUser(),
     ]);
-    const meta = (session.user.user_metadata ?? {}) as { full_name?: string; phone?: string };
-    if (prof) setP({ full_name: prof.full_name || meta.full_name || "", phone: prof.phone || meta.phone || "", governorate: prof.governorate ?? "", address: prof.address ?? "", avatar_url: prof.avatar_url ?? "" });
-    else if (meta.full_name || meta.phone) {
-      // First sign-in after sign-up: store the name/phone given at registration.
-      const first = { full_name: meta.full_name ?? "", phone: meta.phone ?? "", governorate: "", address: "", avatar_url: "" };
-      setP(first);
-      void save(first, true);
-    }
+    // Account details are also kept on the sign-in account itself, so they survive even if the profile row can't be written.
+    const meta = (u?.user?.user_metadata ?? session.user.user_metadata ?? {}) as Record<string, string | undefined>;
+    const pr = (prof ?? {}) as Record<string, string | null | undefined>;
+    const pick = (k: string) => pr[k] || meta[k] || "";
+    setP({ full_name: pick("full_name"), phone: pick("phone"), governorate: pick("governorate"), address: pick("address"), avatar_url: pick("avatar_url") });
     setOrders(ord ?? []);
   };
   useEffect(() => { void load(); }, [uid]);
   const save = async (next = p, quiet = false) => {
-    const row = { id: uid, full_name: next.full_name.trim() || null, phone: next.phone.trim() || null, governorate: next.governorate || null, address: next.address.trim() || null, updated_at: new Date().toISOString() };
-    let { error } = await storeClient.from("profiles").upsert({ ...row, avatar_url: next.avatar_url || null }, { onConflict: "id" });
-    // Older databases may lack the photo column — still save the details.
-    if (error && /avatar_url/i.test(error.message)) ({ error } = await storeClient.from("profiles").upsert(row, { onConflict: "id" }));
+    const clean = { full_name: next.full_name.trim(), phone: next.phone.trim(), governorate: next.governorate, address: next.address.trim(), avatar_url: next.avatar_url };
+    const { error: metaErr } = await supabase.auth.updateUser({ data: clean });
+    const row = { id: uid, full_name: clean.full_name || null, phone: clean.phone || null, governorate: clean.governorate || null, address: clean.address || null, updated_at: new Date().toISOString() };
+    let { error } = await storeClient.from("profiles").upsert({ ...row, avatar_url: clean.avatar_url || null }, { onConflict: "id" });
+    if (error) ({ error } = await storeClient.from("profiles").upsert(row, { onConflict: "id" }));
+    if (error) ({ error } = await storeClient.from("profiles").upsert({ id: uid, full_name: row.full_name, phone: row.phone }, { onConflict: "id" }));
     if (quiet) return;
-    setSaved(error ? `Couldn't save: ${error.message}` : "Saved ✓");
-    setTimeout(() => setSaved(""), error ? 6000 : 2000);
+    const failed = metaErr && error;
+    setSaved(failed ? `Couldn't save: ${(error ?? metaErr)!.message}` : "Saved ✓");
+    setTimeout(() => setSaved(""), failed ? 6000 : 2000);
   };
   const uploadAvatar = async (file: File) => {
     if (!file.type.startsWith("image/")) return setSaved("Please choose an image.");

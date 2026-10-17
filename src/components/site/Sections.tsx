@@ -1,11 +1,12 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useLocation } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cart } from "@/lib/cart";
 import { CURRENCY, DROP_ACTIVE, ORDERING_ENABLED, INSTAGRAM_URL, WHATSAPP_CHANNEL_URL } from "@/config";
-import { visibleDrops, customSections, banners, resolveImage, sectionAnchor, bundles, getProduct, products, singleCategories, onSale, finalPrice, type Product } from "@/data/products";
+import { visibleDrops, customSections, banners, resolveImage, sectionAnchor, bundles, getProduct, products, singleCategories, onSale, finalPrice, backImage, type Product, type BannerPlacement, type BannerSize } from "@/data/products";
 import { DropsCarousel } from "./DropsCarousel";
 import { RatingStars } from "./RatingStars";
 import { FavoriteButton } from "./FavoriteButton";
+import { Lock } from "lucide-react";
 
 const price = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: CURRENCY, maximumFractionDigits: 0 }).format(n);
 
@@ -45,28 +46,45 @@ export function PriceTag({ p, className = "" }: { p: Product; className?: string
   );
 }
 
+export function SoonLock({ big = false }: { big?: boolean }) {
+  return (
+    <div className="pointer-events-none absolute inset-0 grid place-items-center bg-background/20">
+      <div className="flex flex-col items-center gap-2 text-foreground">
+        <span className={`grid place-items-center rounded-full border border-border bg-background/80 backdrop-blur ${big ? "h-20 w-20" : "h-14 w-14"}`}>
+          <Lock size={big ? 32 : 22} strokeWidth={1.8} />
+        </span>
+        <span className={`bg-primary px-3 py-1 font-bold uppercase tracking-[.3em] text-primary-foreground ${big ? "text-sm" : "text-[11px]"}`}>Soon</span>
+      </div>
+    </div>
+  );
+}
+
 export function ProductCard({ p }: { p: Product }) {
   const available = p.inStock && !p.comingSoon;
   const soon = !!p.comingSoon;
+  const onHome = useLocation({ select: (l) => l.pathname === "/" });
+  const back = onHome && !soon ? backImage(p.images) : undefined;
   return (
     <article className="group glass relative flex flex-col border border-border">
-      <Link to="/product/$id" params={{ id: p.id }} className="relative block aspect-[4/5] overflow-hidden">
-        <img src={p.images[0]} alt={p.name} loading="lazy" width={768} height={960} className={`h-full w-full object-cover transition-transform duration-700 group-hover:scale-105 ${soon ? "scale-110 blur-[7px]" : ""}`} />
+      <Link to="/product/$id" params={{ id: p.id }} className="relative block aspect-[4/5] overflow-hidden bg-muted">
+        <img src={p.images[0]} alt={p.name} loading="lazy" width={768} height={960} className={`h-full w-full object-cover transition-all duration-700 group-hover:scale-105 ${back ? "group-hover:opacity-0" : ""} ${soon ? "scale-110 blur-[7px]" : ""}`} />
+        {back && <img src={back} alt={`${p.name} back view`} loading="lazy" width={768} height={960} className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-700 group-hover:opacity-100" />}
+        {soon && <SoonLock />}
         <div className="absolute left-3 top-3 flex flex-col items-start gap-1">
           {onSale(p) && <span className="bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-[.2em] text-destructive-foreground">Sale</span>}
           {p.badge && <span className=" bg-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] text-primary-foreground">{p.badge}</span>}
         </div>
-        {!available && <span className="absolute bottom-3 right-3 bg-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] text-primary-foreground">{soon ? "Soon" : "Sold out"}</span>}
+        {!available && !soon && <span className="absolute bottom-3 right-3 bg-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] text-primary-foreground">Sold out</span>}
       </Link>
       <div className="flex flex-1 flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-2">
           <h3 className="min-w-0 break-words text-sm font-medium uppercase tracking-wide"><Link to="/product/$id" params={{ id: p.id }} className="hover:text-primary">{p.name}</Link></h3>
-          <div className="flex shrink-0 flex-col items-end gap-1.5">
-            <PriceTag p={p} className="text-sm" />
-            <FavoriteButton productId={p.id} />
-          </div>
+          <PriceTag p={p} className="shrink-0 text-sm" />
         </div>
-        <RatingStars productId={p.id} compact />
+        <div className="flex items-center justify-between gap-2">
+          <RatingStars productId={p.id} compact />
+          <FavoriteButton productId={p.id} />
+        </div>
         <div className="flex gap-1.5">
           {p.colors.map((c) => <span key={c.name} title={c.name} className="h-3.5 w-3.5 rounded-full border border-border" style={{ background: c.hex }} />)}
         </div>
@@ -80,9 +98,9 @@ export function ProductCard({ p }: { p: Product }) {
           ) : !soon ? (
             <button type="button" disabled className="btn btn-ghost h-10 w-full whitespace-nowrap px-2 tracking-[.14em] opacity-50">Sold out</button>
           ) : (
-            <a href={WHATSAPP_CHANNEL_URL} target="_blank" rel="noopener noreferrer" className="btn btn-primary h-10 w-full whitespace-nowrap px-2 tracking-[.14em]">Notify me</a>
+            <a href={WHATSAPP_CHANNEL_URL} target="_blank" rel="noopener noreferrer" className="btn btn-primary h-auto min-h-10 w-full flex-col gap-0.5 px-2 py-2 tracking-[.14em]"><span>Notify me</span><span className="text-[8px] font-medium normal-case tracking-normal opacity-90">Follow us on the WhatsApp channel</span></a>
           )}
-          <p className="mt-2 h-3 text-center text-[10px] leading-3 text-muted-foreground">{available ? "\u00A0" : "Follow us on the WhatsApp channel"}</p>
+          <p className="mt-2 h-3 text-center text-[10px] leading-3 text-muted-foreground">{!available && !soon ? "Follow us on the WhatsApp channel" : "\u00A0"}</p>
         </div>
       </div>
     </article>
@@ -128,8 +146,15 @@ export function CustomSections() {
   );
 }
 
-export function CrewBanner() {
-  const list = banners.map(resolveImage).filter(Boolean);
+const TITLE_SIZE: Record<BannerSize, string> = {
+  s: "text-2xl md:text-4xl",
+  m: "text-4xl md:text-6xl",
+  l: "text-5xl md:text-8xl",
+  xl: "text-6xl md:text-9xl",
+};
+
+export function CrewBanner({ placement = "after-drops" }: { placement?: BannerPlacement }) {
+  const list = banners.filter((b) => b.placement === placement).map((b) => ({ ...b, src: resolveImage(b.src) })).filter((b) => b.src);
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(0);
   const startX = useRef<number | null>(null);
@@ -146,8 +171,16 @@ export function CrewBanner() {
       onPointerUp={(e) => { if (startX.current === null) return; const dx = e.clientX - startX.current; startX.current = null; if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1); }}
       onPointerCancel={() => { startX.current = null; }}>
       <div className="flex transition-transform duration-700 ease-out" style={{ transform: `translateX(-${(i % list.length) * 100}%)` }}>
-        {list.map((src, k) => (
-          <img key={k} src={src} alt="Vice crew wearing Vice t-shirts" loading={k === 0 ? "eager" : "lazy"} width={1920} height={710} className="aspect-[2.7/1] w-full shrink-0 object-cover" />
+        {list.map((b, k) => (
+          <div key={k} className="relative w-full shrink-0">
+            <img src={b.src} alt={b.title || "Vice lookbook"} loading={k === 0 ? "eager" : "lazy"} width={1920} height={710} draggable={false} className="aspect-[4/5] max-h-[80svh] w-full object-cover object-center sm:aspect-[16/9] md:aspect-[2.2/1] md:max-h-none lg:aspect-[2.7/1]" />
+            {(b.title || b.subtitle) && (
+              <div className="banner-overlay pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+                {b.title && <h2 className={`font-display font-black uppercase leading-none tracking-tight ${TITLE_SIZE[b.titleSize ?? "l"]}`}>{b.title}</h2>}
+                {b.subtitle && <p className="mt-4 max-w-2xl text-[11px] font-semibold uppercase tracking-[.25em] md:text-sm">{b.subtitle}</p>}
+              </div>
+            )}
+          </div>
         ))}
       </div>
       {list.length > 1 && (

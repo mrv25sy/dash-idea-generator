@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/store-client";
 import { storeClient } from "@/lib/store-client";
-import { dropClosed, loadCatalog, resolveImage, type CustomSection, type Drop } from "@/data/products";
+import { BANNER_PLACEMENTS, dropClosed, loadCatalog, resolveImage, toBanner, type Banner, type BannerPlacement, type BannerSize, type CustomSection, type Drop } from "@/data/products";
 
 const input = "h-11 w-full border border-border bg-background px-3 text-sm outline-none focus:border-primary";
 const label = "nav-link mb-1 block";
@@ -128,14 +128,14 @@ export function SectionsTab() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Drops, Singles and Get the Fit (bundles) are built in. Add extra homepage sections here.</p>
-      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); const v = name.trim(); if (!v || list.some((s) => s.name === v)) return; save([...list, { name: v, showInNav: true }]); setName(""); }}>
+      <form className="flex flex-col gap-2 sm:flex-row" onSubmit={(e) => { e.preventDefault(); const v = name.trim(); if (!v || list.some((s) => s.name === v)) return; save([...list, { name: v, showInNav: true }]); setName(""); }}>
         <input className={input} value={name} placeholder="Section name, e.g. Summer Picks" onChange={(e) => setName(e.target.value)} />
         <button className="btn btn-primary h-11 shrink-0">+ Add section</button>
       </form>
       {list.map((s, i) => (
         <details key={s.name} className="glass border border-border p-4">
           <summary className="flex cursor-pointer flex-wrap items-center gap-3">
-            <span className="flex-1 font-medium uppercase">{s.name} <span className="text-xs normal-case text-muted-foreground">· {rows.filter((p) => p.type === `section:${s.name}`).length} products</span></span>
+            <span className="min-w-0 flex-1 basis-full break-words font-medium uppercase sm:basis-auto">{s.name} <span className="text-xs normal-case text-muted-foreground">· {rows.filter((p) => p.type === `section:${s.name}`).length} products</span></span>
             <label className="flex items-center gap-1 text-xs"><input type="checkbox" checked={s.showInNav} onChange={(e) => save(list.map((x, j) => (j === i ? { ...x, showInNav: e.target.checked } : x)))} /> In menu</label>
             <button type="button" className="btn btn-ghost h-8 px-2 text-[10px]" onClick={() => move(i, -1)}>↑</button>
             <button type="button" className="btn btn-ghost h-8 px-2 text-[10px]" onClick={() => move(i, 1)}>↓</button>
@@ -160,29 +160,31 @@ export function SectionsTab() {
 }
 
 export function BannersTab() {
-  const [list, setList] = useState<string[] | null>(null);
+  const [list, setList] = useState<Banner[] | null>(null);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(false);
   useEffect(() => {
     storeClient.from("store_settings").select("value").eq("key", "banners_json").maybeSingle().then(({ data }) => {
-      try { setList(data?.value != null ? (JSON.parse(data.value) as string[]) : ["asset:crew"]); } catch { setList(["asset:crew"]); }
+      const def = [toBanner("asset:crew")];
+      try { setList(data?.value != null ? (JSON.parse(data.value) as (string | Banner)[]).map(toBanner) : def); } catch { setList(def); }
     });
   }, []);
   if (!list) return <p className="text-sm text-muted-foreground">Loading…</p>;
   // Changes are staged locally; the website only updates when "Save changes" is pressed.
-  const stage = (next: string[]) => { setList(next); setDirty(true); setMsg(""); };
+  const stage = (next: Banner[]) => { setList(next); setDirty(true); setMsg(""); };
+  const upd = (i: number, patch: Partial<Banner>) => stage(list.map((b, j) => (j === i ? { ...b, ...patch } : b)));
   const save = async () => { setBusy(true); const err = await writeSetting("banners_json", list); setMsg(err || "Saved — website updated."); if (!err) setDirty(false); setBusy(false); };
   const upload = async (files: FileList | null) => {
     if (!files?.length) return;
     setBusy(true);
-    const added: string[] = [];
+    const added: Banner[] = [];
     for (const f of Array.from(files)) {
       const path = `banners/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${f.name.split(".").pop()}`;
       const up = await supabase.storage.from("product-images").upload(path, f, { contentType: f.type });
       if (up.error) { setMsg(up.error.message); continue; }
       const { data } = await supabase.storage.from("product-images").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-      if (data?.signedUrl) added.push(data.signedUrl);
+      if (data?.signedUrl) added.push({ src: data.signedUrl, placement: "after-drops", titleSize: "l" });
     }
     setBusy(false);
     stage([...list, ...added]);
@@ -190,18 +192,42 @@ export function BannersTab() {
   const move = (i: number, d: number) => { const n = [...list]; const j = i + d; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j]!, n[i]!]; stage(n); };
   return (
     <div className="space-y-4">
-      <p className="text-sm text-muted-foreground">Full-width photos shown between Drops and Singles. More than one photo slides every 5 seconds. Remove all photos to hide the section. Best size: wide banner (about 2.7 : 1).</p>
+      <p className="text-sm text-muted-foreground">Full-width photos on the homepage. Choose where each one appears and add a title and text over it. Photos in the same spot slide every 5 seconds.</p>
       <div className="flex flex-wrap items-center gap-3">
         <label className="btn btn-ghost inline-flex cursor-pointer">{busy ? "Uploading…" : "+ Add photos"}<input type="file" accept="image/*" multiple className="hidden" disabled={busy} onChange={(e) => { void upload(e.target.files); e.target.value = ""; }} /></label>
         <button className="btn btn-primary disabled:opacity-50" disabled={busy || !dirty} onClick={save}>Save changes</button>
         {dirty && <span className="text-xs text-primary">Unsaved changes</span>}
       </div>
-      {list.length === 0 && <p className="text-sm text-muted-foreground">No photos — the banner section will be hidden on the website after you save.</p>}
-      <div className="grid gap-3 sm:grid-cols-2">
-        {list.map((src, i) => (
-          <div key={src + i} className="glass border border-border p-2">
-            <img src={resolveImage(src)} alt="" className="aspect-[2.7/1] w-full object-cover" />
-            <div className="mt-2 flex gap-2">
+      {list.length === 0 && <p className="text-sm text-muted-foreground">No banners — none will show on the website after you save.</p>}
+      <div className="grid gap-3 md:grid-cols-2">
+        {list.map((b, i) => (
+          <div key={b.src + i} className="glass min-w-0 border border-border p-3">
+            <div className="relative">
+              <img src={resolveImage(b.src)} alt="" className="aspect-[2.7/1] w-full object-cover" />
+              {(b.title || b.subtitle) && (
+                <div className="banner-overlay absolute inset-0 flex flex-col items-center justify-center px-2 text-center">
+                  {b.title && <p className="font-display text-lg font-black uppercase leading-none">{b.title}</p>}
+                  {b.subtitle && <p className="mt-1 text-[8px] font-semibold uppercase tracking-widest">{b.subtitle}</p>}
+                </div>
+              )}
+            </div>
+            <div className="mt-3 grid gap-3">
+              <div><label className={label}>Where it shows</label>
+                <select className={input} value={b.placement} onChange={(e) => upd(i, { placement: e.target.value as BannerPlacement })}>
+                  {BANNER_PLACEMENTS.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+                </select>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <div><label className={label}>Title over photo</label><input className={input} value={b.title ?? ""} placeholder="e.g. Take action" onChange={(e) => upd(i, { title: e.target.value })} /></div>
+                <div><label className={label}>Title size</label>
+                  <select className={input} value={b.titleSize ?? "l"} onChange={(e) => upd(i, { titleSize: e.target.value as BannerSize })}>
+                    <option value="s">Small</option><option value="m">Medium</option><option value="l">Large</option><option value="xl">Extra large</option>
+                  </select>
+                </div>
+              </div>
+              <div><label className={label}>Text under the title</label><input className={input} value={b.subtitle ?? ""} placeholder="e.g. Do what you need to get what you want." onChange={(e) => upd(i, { subtitle: e.target.value })} /></div>
+            </div>
+            <div className="mt-3 flex gap-2">
               <button className="btn btn-ghost h-8 px-2 text-[10px]" onClick={() => move(i, -1)}>↑</button>
               <button className="btn btn-ghost h-8 px-2 text-[10px]" onClick={() => move(i, 1)}>↓</button>
               <button className="btn btn-ghost ml-auto h-8 px-3 text-[10px]" onClick={() => stage(list.filter((_, j) => j !== i))}>Remove</button>

@@ -25,12 +25,17 @@ function Index() {
   return (
     <div key={v} className="contents">
       <Hero />
+      <CrewBanner placement="after-hero" />
       <DropsSection />
-      <CrewBanner />
+      <CrewBanner placement="after-drops" />
       <SinglesSection />
+      <CrewBanner placement="after-singles" />
       <CustomSections />
+      <CrewBanner placement="after-sections" />
       <BundlesSection />
+      <CrewBanner placement="after-bundles" />
       <CommunitySection />
+      <CrewBanner placement="after-community" />
     </div>
   );
 }
