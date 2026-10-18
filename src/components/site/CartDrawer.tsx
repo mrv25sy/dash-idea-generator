@@ -444,7 +444,7 @@ function playDoneChime() {
     const AC = window.AudioContext || (window as any).webkitAudioContext;
     if (!AC) return;
     const ctx = new AC();
-    [[880, 0], [1318.5, 0.12]].forEach(([f, at]) => {
+    ([[880, 0], [1318.5, 0.12]] as const).forEach(([f, at]) => {
       const o = ctx.createOscillator();
       const g = ctx.createGain();
       o.type = "sine"; o.frequency.value = f;
