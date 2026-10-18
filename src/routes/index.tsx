@@ -23,7 +23,7 @@ export const Route = createFileRoute("/")({
 function Index() {
   const v = useCatalogVersion();
   return (
-    <div key={v} className="contents">
+    <div className="contents">
       <Hero />
       <CrewBanner placement="after-hero" />
       <DropsSection />
