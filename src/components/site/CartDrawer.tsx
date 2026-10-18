@@ -180,6 +180,7 @@ export function CartDrawer() {
       ],
     });
     if (error) { setBusy(false); return setPayErr("Couldn't place the order, please try again."); }
+    playDoneChime();
     setSentNote("Order placed with your receipt. We'll confirm it soon — watch the status here.");
     const placed = { id, date: new Date().toISOString(), total: subtotal, items, status: "Pending" };
     const next = [placed, ...history];
@@ -369,7 +370,7 @@ export function CartDrawer() {
                 ))}
               </div>
               <ol className="space-y-2 text-sm">
-                {["Download the QR or copy the address", "Send the exact amount in your payment app", "Upload your payment screenshot below"].map((t, i) => (
+                {["Download the QR or copy the address", "Send the exact amount Sham-Cash app", "Upload your payment screenshot below"].map((t, i) => (
                   <li key={t} className="flex items-center gap-3">
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-success text-xs font-bold text-success-foreground">{i + 1}</span>
                     {t}
@@ -435,6 +436,27 @@ export function CartDrawer() {
       {printing && <ReceiptPrinter order={printing} onClose={() => setPrinting(null)} />}
     </>
   );
+}
+
+// Short two-note "payment done" chime, synthesized so there's no file to load.
+function playDoneChime() {
+  try {
+    const AC = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AC) return;
+    const ctx = new AC();
+    [[880, 0], [1318.5, 0.12]].forEach(([f, at]) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      const t = ctx.currentTime + at;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.25, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.6);
+      o.connect(g).connect(ctx.destination);
+      o.start(t); o.stop(t + 0.65);
+    });
+    setTimeout(() => void ctx.close(), 1200);
+  } catch { /* sound is optional */ }
 }
 
 function Field({ label, error, children }: { label: string; error?: string | undefined; children: React.ReactNode }) {
