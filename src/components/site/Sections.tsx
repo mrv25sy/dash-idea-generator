@@ -11,16 +11,7 @@ import { Lock } from "lucide-react";
 const price = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: CURRENCY, maximumFractionDigits: 0 }).format(n);
 
 function FadeUp({ children, className = "" }: { children: ReactNode; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [shown, setShown] = useState(false);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const io = new IntersectionObserver((entries) => { if (entries[0]?.isIntersecting) { setShown(true); io.disconnect(); } }, { rootMargin: "0px 0px 60% 0px", threshold: 0 });
-    io.observe(el);
-    return () => io.disconnect();
-  }, []);
-  return <div ref={ref} className={`fade-up ${shown ? "is-in" : ""} ${className}`}>{children}</div>;
+  return <div className={className}>{children}</div>;
 }
 
 function SectionHead({ eyebrow, title, link, sub }: { eyebrow?: string; title: string; link?: "drops" | "singles"; sub?: string }) {

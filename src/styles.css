@@ -176,8 +176,6 @@
 /* Phones: drop the heavy animated blur background and glass blur so dark mode scrolls as smoothly as light mode */
 @media (max-width: 1023px) {
   :root[data-theme="dark"] .orb, :root[data-theme="dark"] .grain { display: none; }
-  .glass, .btn-ghost { backdrop-filter: none; }
-  .glass { background: var(--card); }
 }
 @media (prefers-reduced-motion: reduce) { .fade-up { opacity: 1; transform: none; transition: none; } }
 
