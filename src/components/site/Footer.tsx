@@ -13,7 +13,7 @@ export function Footer() {
         {[
           ["Ships within 10–12 days", "To all Syrian governorates"],
           ["Quality checked", "Every piece inspected before shipping"],
-          ["No returns", "All sales are final"],
+          ["Direct Support", "Instant WhatsApp assistance anytime"],
         ].map(([t, s]) => (
           <div key={t}>
             <h3 className="text-sm font-semibold uppercase tracking-[0.12em]">{t}</h3>
