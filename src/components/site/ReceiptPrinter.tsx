@@ -25,35 +25,6 @@ export function ReceiptPrinter({ order, onClose }: { order: ReceiptOrder; onClos
     return () => { clearTimeout(t); window.removeEventListener("keydown", esc); };
   }, [onClose]);
 
-  const download = () => {
-    const W = 600, lineH = 34;
-    const H = 520 + order.items.length * lineH;
-    const c = document.createElement("canvas");
-    c.width = W; c.height = H;
-    const g = c.getContext("2d")!;
-    g.fillStyle = "#fbfaf6"; g.fillRect(0, 0, W, H);
-    g.fillStyle = "#111"; g.textAlign = "center";
-    g.font = "900 56px Georgia, serif"; g.fillText("VICE", W / 2, 80);
-    g.font = "16px monospace"; g.fillText("ORDER RECEIPT", W / 2, 112);
-    g.fillText(`${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`, W / 2, 140);
-    g.textAlign = "left"; g.font = "bold 22px monospace";
-    g.fillText(`ORDER ${order.id}`, 40, 200);
-    g.font = "18px monospace";
-    if (order.name) g.fillText(`FOR ${order.name.toUpperCase()}`, 40, 232);
-    let y = 290;
-    order.items.forEach((it) => { g.fillText(it.slice(0, 44), 40, y); y += lineH; });
-    g.fillText("- ".repeat(26), 40, y); y += 44;
-    g.font = "bold 28px monospace"; g.fillText("TOTAL", 40, y);
-    g.textAlign = "right"; g.fillText(money(order.total), W - 40, y);
-    g.textAlign = "left"; y += 40;
-    g.font = "16px monospace"; g.fillText(`STATUS: ${(order.status ?? "Pending").toUpperCase()}`, 40, y); y += 30;
-    let x = 60;
-    b.forEach((w, i) => { if (i % 2 === 0) g.fillRect(x, y, w * 3, 70); x += w * 3 + 2; });
-    const a = document.createElement("a");
-    a.href = c.toDataURL("image/png");
-    a.download = `vice-receipt-${order.id.replace("#", "")}.png`;
-    a.click();
-  };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-background/85 px-4 pb-10 pt-10 backdrop-blur-md" onClick={onClose}>
@@ -112,12 +83,8 @@ export function ReceiptPrinter({ order, onClose }: { order: ReceiptOrder; onClos
         )}
 
         {phase !== "printing" && (
-          <div className="receipt-fade mt-5 grid grid-cols-2 gap-3" style={{ animationDelay: "150ms" }}>
-            <button onClick={download} className="receipt-btn receipt-btn-primary">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M12 3v12m0 0-5-5m5 5 5-5M5 21h14" /></svg>
-              Download
-            </button>
-            <button onClick={onClose} className="receipt-btn receipt-btn-ghost">
+          <div className="receipt-fade mt-5 grid" style={{ animationDelay: "150ms" }}>
+            <button onClick={onClose} className="receipt-btn receipt-btn-primary w-full">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="m5 12 5 5 9-10" /></svg>
               Done
             </button>
