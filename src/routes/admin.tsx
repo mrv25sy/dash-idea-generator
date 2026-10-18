@@ -7,6 +7,7 @@ import { supabase } from "@/lib/store-client";
 import { imageName, loadCatalog, resolveImage, withImageName } from "@/data/products";
 import { DropsTab, SectionsTab, BannersTab, InstagramTab } from "@/components/admin/ContentTabs";
 import { BroadcastTab } from "@/components/admin/BroadcastTab";
+import { CustomersTab } from "@/components/admin/CustomersTab";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -97,7 +98,7 @@ type BundleRow = { id: string; name: string; product_ids: string[]; price: numbe
 type OrderRow = { id: string; order_code: string; name: string; phone: string; governorate: string; address: string; notes: string | null; items: unknown; total: number; status: string; created_at: string };
 
 function Dashboard({ email }: { email: string }) {
-  const [tab, setTab] = useState<"products" | "bundles" | "orders" | "drops" | "sections" | "banners" | "instagram" | "inbox">("orders");
+  const [tab, setTab] = useState<"products" | "bundles" | "orders" | "drops" | "sections" | "banners" | "instagram" | "inbox" | "customers">("orders");
   const [rk, setRk] = useState(0);
   return (
     <div className="mx-auto w-full max-w-6xl overflow-x-hidden px-4 py-8 sm:px-5 sm:py-12">
@@ -110,7 +111,7 @@ function Dashboard({ email }: { email: string }) {
         </div>
       </div>
       <div className="mb-8 flex gap-2 overflow-x-auto border-b border-border">
-        {(["orders", "products", "drops", "bundles", "sections", "banners", "instagram", "inbox"] as const).map((t) => (
+        {(["orders", "customers", "products", "drops", "bundles", "sections", "banners", "instagram", "inbox"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)} className={`nav-link -mb-px whitespace-nowrap border-b-2 px-4 py-3 ${tab === t ? "border-primary text-foreground" : "border-transparent"}`}>{t === "products" ? "Designs" : t === "inbox" ? "Messages" : t}</button>
         ))}
       </div>
@@ -122,6 +123,7 @@ function Dashboard({ email }: { email: string }) {
       {tab === "banners" && <BannersTab key={rk} />}
       {tab === "instagram" && <InstagramTab key={rk} />}
       {tab === "inbox" && <BroadcastTab key={rk} />}
+      {tab === "customers" && <CustomersTab key={rk} />}
     </div>
   );
 }
