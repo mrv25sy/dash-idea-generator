@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { CURRENCY, INSTAGRAM_URL, ORDERING_ENABLED, PHONE_NUMBER, WHATSAPP_CHANNEL_URL } from "@/config";
 import { cart } from "@/lib/cart";
@@ -7,17 +7,9 @@ import { PriceTag, ProductCard, SoonLock } from "@/components/site/Sections";
 import { RatingStars } from "@/components/site/RatingStars";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
 import { NotFoundView } from "@/components/site/NotFoundView";
+import { guideFor, loadSizeGuides, type SizeGuide } from "@/lib/size-guides";
 
 const price = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: CURRENCY, maximumFractionDigits: 0 }).format(n);
-
-// Placeholder size chart (cm) — edit freely.
-const SIZE_CHART = [
-  ["S", "52", "70"],
-  ["M", "55", "72"],
-  ["L", "58", "74"],
-  ["XL", "61", "76"],
-  ["XXL", "64", "78"],
-];
 
 export const Route = createFileRoute("/product/$id")({
   loader: async ({ params }) => {
@@ -58,6 +50,9 @@ function ProductView() {
   const [size, setSize] = useState(p.sizes.length === 1 ? p.sizes[0] : "");
   const [qty, setQty] = useState(1);
   const [guide, setGuide] = useState(false);
+  const [guides, setGuides] = useState<SizeGuide[]>([]);
+  useEffect(() => { loadSizeGuides().then(setGuides).catch(() => setGuides([])); }, []);
+  const sizeGuide = guideFor(guides, p.id, p.category);
   const [sizeErr, setSizeErr] = useState(false);
   const left = stockFor(p, size || undefined);
   const sizeLeft = (sz: string) => stockFor(p, sz);
@@ -114,7 +109,7 @@ function ProductView() {
           <div>
             <div className="mb-3 flex items-center justify-between">
               <p className="nav-link">Size</p>
-              {p.sizes.length > 1 && <button onClick={() => setGuide(true)} className="nav-link underline underline-offset-4">Size guide</button>}
+              {p.sizes.length > 1 && sizeGuide && sizeGuide.rows.length > 0 && <button onClick={() => setGuide(true)} className="nav-link underline underline-offset-4">Size guide</button>}
             </div>
             <div className="flex flex-wrap gap-2">
               {p.sizes.map((s) => (
@@ -175,18 +170,21 @@ function ProductView() {
         </section>
       )}
 
-      {guide && (
+      {guide && sizeGuide && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-background/80 p-5 backdrop-blur-sm" onClick={() => setGuide(false)}>
-          <div role="dialog" aria-label="Size guide" className="glass w-full max-w-md border border-border p-6" onClick={(e) => e.stopPropagation()}>
+          <div role="dialog" aria-label="Size guide" className="glass max-h-[90vh] w-full max-w-md overflow-y-auto border border-border p-6" onClick={(e) => e.stopPropagation()}>
             <div className="mb-5 flex items-center justify-between">
               <h3 className="font-display text-xl font-semibold uppercase">Size guide</h3>
               <button onClick={() => setGuide(false)} aria-label="Close" className="icon-btn">✕</button>
             </div>
-            <table className="w-full text-sm">
-              <thead><tr className="text-left text-muted-foreground"><th className="py-2">Size</th><th>Chest width (cm)</th><th>Length (cm)</th></tr></thead>
-              <tbody>{SIZE_CHART.map((r) => <tr key={r[0]} className="border-t border-border"><td className="py-2 font-semibold">{r[0]}</td><td>{r[1]}</td><td>{r[2]}</td></tr>)}</tbody>
-            </table>
-            <p className="mt-4 text-xs text-muted-foreground">Measurements are approximate. Between sizes? Size up for a looser fit.</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead><tr className="text-left text-muted-foreground"><th className="py-2 pr-3">Size</th>{sizeGuide.columns.map((c) => <th key={c} className="pr-3">{c} (cm)</th>)}</tr></thead>
+                <tbody>{sizeGuide.rows.map((r) => <tr key={r.size} className="border-t border-border"><td className="py-2 pr-3 font-semibold">{r.size}</td>{sizeGuide.columns.map((c, i) => <td key={c} className="pr-3 tabular-nums">{r.values[i] || "—"}</td>)}</tr>)}</tbody>
+              </table>
+            </div>
+            {sizeGuide.fitNote && <p className="mt-4 text-xs text-muted-foreground"><span className="font-semibold uppercase tracking-wider text-foreground">Fit · </span>{sizeGuide.fitNote}</p>}
+            {sizeGuide.howToMeasure && <p className="mt-2 text-xs text-muted-foreground"><span className="font-semibold uppercase tracking-wider text-foreground">How to measure · </span>{sizeGuide.howToMeasure}</p>}
           </div>
         </div>
       )}
