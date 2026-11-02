@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { INSTAGRAM_URL, PHONE_NUMBER, WHATSAPP_CHANNEL_URL } from "@/config";
 import { Logo } from "./Logo";
 
 const WHATSAPP_CHAT = `https://wa.me/${PHONE_NUMBER.replace(/\D/g, "")}?text=${encodeURIComponent("Hi Vice!")}`;
 
 export function Footer() {
-  const [shipOpen, setShipOpen] = useState(false);
   return (
     <>
     <section aria-label="Store info" className="border-t border-border">
@@ -26,7 +25,7 @@ export function Footer() {
       <div className="mx-auto flex max-w-7xl flex-col gap-6 px-5 md:flex-row md:items-center md:justify-between md:px-8">
         <Logo className="h-9 w-5 shrink-0" />
         <div className="flex gap-8">
-          <button onClick={() => setShipOpen((o) => !o)} aria-expanded={shipOpen} className="nav-link">Shipping</button>
+          <Link to="/shipping" className="nav-link">Shipping</Link>
           <a href={WHATSAPP_CHAT} target="_blank" rel="noopener noreferrer" className="nav-link">Customer Support</a>
         </div>
         <div className="flex gap-3">
@@ -38,19 +37,6 @@ export function Footer() {
           </a>
         </div>
       </div>
-      {shipOpen && (
-        <section id="shipping" className="mx-auto mt-8 max-w-7xl px-5 md:px-8">
-          <div className="border border-border p-5 text-sm">
-            <h3 className="font-display text-lg font-semibold uppercase tracking-wider">Shipping guide</h3>
-            <ul className="mt-3 space-y-2 text-muted-foreground">
-              <li>• We ship to all Syrian governorates.</li>
-              <li>• Orders are prepared within 1–2 days after confirmation.</li>
-              <li>• Delivery usually takes 2–5 days depending on your city.</li>
-              <li>• Shipping cost is confirmed with you on WhatsApp before sending.</li>
-            </ul>
-          </div>
-        </section>
-      )}
       <p className="mx-auto mt-8 max-w-7xl px-5 text-[11px] uppercase tracking-[0.3em] text-muted-foreground md:px-8">© {new Date().getFullYear()} Vice. Street calls, we answer.</p>
       <div aria-hidden className="wordmark">VICE</div>
     </footer>

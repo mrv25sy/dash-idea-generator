@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCatalogVersion } from "@/data/products";
+import { useCatalogVersion, sectionHidden as h } from "@/data/products";
 import { Hero } from "@/components/site/Hero";
 import { DropsSection, SinglesSection, BundlesSection, CommunitySection, CustomSections, CrewBanner, InstagramSection } from "@/components/site/Sections";
 
@@ -26,17 +26,17 @@ function Index() {
     <div className="contents">
       <Hero />
       <CrewBanner placement="after-hero" />
-      <DropsSection />
+      {!h("drops") && <DropsSection />}
       <CrewBanner placement="after-drops" />
-      <SinglesSection />
+      {!h("singles") && <SinglesSection />}
       <CrewBanner placement="after-singles" />
-      <CustomSections />
+      {!h("custom") && <CustomSections />}
       <CrewBanner placement="after-sections" />
-      <BundlesSection />
+      {!h("bundles") && <BundlesSection />}
       <CrewBanner placement="after-bundles" />
-      <CommunitySection />
+      {!h("community") && <CommunitySection />}
       <CrewBanner placement="after-community" />
-      <InstagramSection />
+      {!h("instagram") && <InstagramSection />}
     </div>
   );
 }

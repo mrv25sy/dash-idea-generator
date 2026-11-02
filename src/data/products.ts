@@ -25,7 +25,18 @@ export type Product = {
   description?: string | undefined;
   details?: { label: string; value: string }[];
   salePrice?: number | undefined;
+  /** Whole-product stock; null/undefined = unlimited. */
+  stock?: number | null;
+  /** Per-size stock, e.g. { L: 4, M: 10 }. A listed size overrides `stock`. */
+  sizeStock?: Record<string, number> | undefined;
 };
+
+/** Pieces left for a size (or whole product). null = unlimited. */
+export function stockFor(p: Pick<Product, "stock" | "sizeStock">, size?: string): number | null {
+  if (size && p.sizeStock && typeof p.sizeStock[size] === "number") return p.sizeStock[size]!;
+  return p.stock ?? null;
+}
+export const LOW_STOCK = 10;
 
 /** Price the customer pays: the sale price when one is set below the regular price. */
 export const finalPrice = (p: Pick<Product, "price" | "salePrice">) =>
@@ -47,6 +58,13 @@ export const singleCategories: { category: string; label: string }[] = [
 
 export const products: Product[] = [];
 
+/** Category display priority for Singles (store_settings.category_order_json); unlisted categories go last. */
+export const categoryOrder: string[] = ["hoodie", "tee", "pants", "cap"];
+export const sortByCategory = (list: Product[]) => {
+  const rank = (c: string) => { const i = categoryOrder.indexOf(c); return i === -1 ? 999 : i; };
+  return [...list].sort((a, b) => rank(a.category) - rank(b.category));
+};
+
 export type Drop = { name: string; tagline: string; cover: string; endsAt?: string | null; archived?: boolean };
 /** A drop is closed once its timer has passed: shown blurred and not shoppable. */
 export const dropClosed = (d: Drop, now = Date.now()) => !!d.endsAt && new Date(d.endsAt).getTime() <= now;
@@ -54,6 +72,17 @@ export const visibleDrops = () => drops.filter((d) => !d.archived);
 
 /** Homepage sections created from the dashboard. Products join one through type "section:<name>". */
 export type CustomSection = { name: string; showInNav: boolean; title?: string; eyebrow?: string; description?: string };
+/** Built-in homepage sections the owner can hide (store_settings.hidden_sections_json). */
+export const BUILTIN_SECTIONS = [
+  { id: "drops", label: "Current drops" },
+  { id: "singles", label: "Singles" },
+  { id: "custom", label: "Custom sections" },
+  { id: "bundles", label: "Get the Fit (bundles)" },
+  { id: "community", label: "Community" },
+  { id: "instagram", label: "Instagram gallery" },
+] as const;
+export const hiddenSections: string[] = [];
+export const sectionHidden = (id: string) => hiddenSections.includes(id);
 export const customSections: CustomSection[] = [];
 /** Where a banner sits on the homepage. Banners sharing a spot slide together. */
 export const BANNER_PLACEMENTS = [
@@ -122,13 +151,15 @@ export function loadCatalog(force = false): Promise<void> {
     const [pr, br, st] = await Promise.all([
       supabase.from("products").select("*").order("sort").order("created_at"),
       supabase.from("bundles").select("*").order("sort").order("created_at"),
-      storeClient.from("store_settings").select("key,value").in("key", ["drops_json", "sections_json", "banners_json", "instagram_json"]),
+      storeClient.from("store_settings").select("key,value").in("key", ["drops_json", "sections_json", "banners_json", "instagram_json", "category_order_json", "hidden_sections_json"]),
     ]);
     const m = Object.fromEntries((st.data ?? []).map((r) => [r.key, r.value]));
     try { if (m["drops_json"]) drops.splice(0, drops.length, ...(JSON.parse(m["drops_json"]) as Drop[]).map((d) => ({ ...d, cover: resolveImage(d.cover) }))); } catch { /* keep samples */ }
     try { if (m["sections_json"]) customSections.splice(0, customSections.length, ...(JSON.parse(m["sections_json"]) as CustomSection[])); } catch { /* ignore */ }
     try { if (m["banners_json"] != null) banners.splice(0, banners.length, ...(JSON.parse(m["banners_json"]) as (string | Banner)[]).map(toBanner)); } catch { /* ignore */ }
     try { if (m["instagram_json"]) Object.assign(instaGallery, JSON.parse(m["instagram_json"])); } catch { /* ignore */ }
+    try { if (m["category_order_json"]) categoryOrder.splice(0, categoryOrder.length, ...(JSON.parse(m["category_order_json"]) as string[])); } catch { /* ignore */ }
+    try { hiddenSections.splice(0, hiddenSections.length, ...(m["hidden_sections_json"] ? (JSON.parse(m["hidden_sections_json"]) as string[]) : [])); } catch { /* ignore */ }
     if (st.data?.length) { version++; subs.forEach((f) => f()); }
     // An empty online catalog keeps the sample products below so the shop never looks blank.
     if (pr.error || !pr.data) { version++; subs.forEach((f) => f()); return; }
@@ -139,6 +170,8 @@ export function loadCatalog(force = false): Promise<void> {
       category: r.category as Product["category"], type: r.type as Product["type"],
       dropName: r.drop_name ?? undefined, inStock: r.in_stock, comingSoon: r.coming_soon, badge: r.badge ?? undefined,
       description: r.description ?? undefined, details: (r.details as { label: string; value: string }[]) ?? [], salePrice: r.sale_price == null ? undefined : Number(r.sale_price),
+      stock: (r as { stock?: number | null }).stock ?? null,
+      sizeStock: ((r as { size_stock?: Record<string, number> | null }).size_stock) ?? undefined,
     })));
     if (br.data) bundles.splice(0, bundles.length, ...br.data.map((b) => ({ id: b.id, name: b.name, productIds: b.product_ids ?? [], price: Number(b.price) })));
     version++;

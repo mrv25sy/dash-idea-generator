@@ -1,6 +1,8 @@
 import { Mail } from "lucide-react";
 import { useEffect, useState } from "react";
 import { storeClient, type BroadcastRow } from "@/lib/store-client";
+import { customerNumber, unpackTag } from "@/lib/coupons";
+import { CouponCard } from "./CouponCard";
 
 const SEEN_KEY = "vice_inbox_seen";
 
@@ -12,8 +14,12 @@ export function InboxButton() {
   const [loading, setLoading] = useState(true);
   const load = async () => {
     setLoading(true);
-    const { data } = await storeClient.from("broadcast_messages").select("*").order("created_at", { ascending: false });
-    setMsgs(data ?? []);
+    const [{ data }, { data: u }] = await Promise.all([
+      storeClient.from("broadcast_messages").select("*").order("created_at", { ascending: false }),
+      storeClient.auth.getUser(),
+    ]);
+    const me = u.user ? customerNumber(u.user.id) : null;
+    setMsgs((data ?? []).filter((m: BroadcastRow) => { const to = unpackTag(m.tag).to; return !to.length || (me != null && to.includes(me)); }));
     setLoading(false);
   };
   useEffect(() => { setSeen(localStorage.getItem(SEEN_KEY) ?? ""); void load(); }, []);
@@ -53,13 +59,15 @@ export function InboxButton() {
             <ul className="space-y-3">
               {msgs.map((m) => {
                 const isNew = !seen || m.created_at > seen;
+                const t = unpackTag(m.tag);
                 return (
                   <li key={m.id} className={`border p-4 ${isNew ? "border-primary" : "border-border"}`}>
                     <div className="flex items-center justify-between gap-3">
                       <p className="font-semibold">{m.title}</p>
-                      {m.tag && <span className="nav-link text-primary">{m.tag}</span>}
+                      {t.tag && <span className="nav-link text-primary">{t.tag}</span>}
                     </div>
                     <p className="mt-1 whitespace-pre-line text-sm">{m.body}</p>
+                    {t.coupon && <CouponCard code={t.coupon} />}
                     <p className="mt-2 text-xs text-muted-foreground">{new Date(m.created_at).toLocaleString()}</p>
                   </li>
                 );

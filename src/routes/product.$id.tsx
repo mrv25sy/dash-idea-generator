@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { CURRENCY, INSTAGRAM_URL, ORDERING_ENABLED, WHATSAPP_CHANNEL_URL } from "@/config";
+import { CURRENCY, INSTAGRAM_URL, ORDERING_ENABLED, PHONE_NUMBER, WHATSAPP_CHANNEL_URL } from "@/config";
 import { cart } from "@/lib/cart";
-import { getProduct, imageName, loadCatalog, onSale, products } from "@/data/products";
+import { getProduct, imageName, loadCatalog, LOW_STOCK, onSale, products, stockFor } from "@/data/products";
 import { PriceTag, ProductCard, SoonLock } from "@/components/site/Sections";
 import { RatingStars } from "@/components/site/RatingStars";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
@@ -59,7 +59,10 @@ function ProductView() {
   const [qty, setQty] = useState(1);
   const [guide, setGuide] = useState(false);
   const [sizeErr, setSizeErr] = useState(false);
-  const available = p.inStock && !p.comingSoon;
+  const left = stockFor(p, size || undefined);
+  const sizeLeft = (sz: string) => stockFor(p, sz);
+  const maxQty = Math.min(10, left ?? 10);
+  const available = p.inStock && !p.comingSoon && left !== 0;
   const soon = !!p.comingSoon;
   const related = products.filter((x) => x.id !== p.id && (x.category === p.category || x.type === p.type)).slice(0, 4);
 
@@ -115,15 +118,25 @@ function ProductView() {
             </div>
             <div className="flex flex-wrap gap-2">
               {p.sizes.map((s) => (
-                <button key={s} onClick={() => setSize(s)} className={`h-11 min-w-12 border px-4 text-xs font-semibold uppercase tracking-wider ${s === size ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-foreground"}`}>{s}</button>
+                <button key={s} onClick={() => { setSize(s); setQty((q) => Math.max(1, Math.min(q, sizeLeft(s) ?? 10))); }} className={`h-11 min-w-12 border px-4 text-xs font-semibold uppercase tracking-wider ${sizeLeft(s) === 0 ? "line-through opacity-50" : ""} ${s === size ? "border-primary bg-primary text-primary-foreground" : "border-border hover:border-foreground"}`}>{s}</button>
               ))}
             </div>
           </div>
 
+          {left != null && !soon && (
+            <div className="flex items-center gap-3">
+              <span className={`grid h-14 w-14 shrink-0 place-items-center rounded-full border-2 font-display text-lg font-semibold tabular-nums ${left <= LOW_STOCK ? "border-primary text-primary" : "border-foreground/60"}`}>{left}</span>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[.2em]">{left === 0 ? "Sold out" : left <= LOW_STOCK ? "Low stock" : "In stock"}</p>
+                <p className="text-xs text-muted-foreground">{left === 0 ? `This size is sold out` : `${left <= LOW_STOCK ? "Only " : ""}${left} ${left === 1 ? "piece" : "pieces"} left${size && p.sizes.length > 1 ? ` in size ${size}` : ""}`}</p>
+              </div>
+            </div>
+          )}
+
           <div>
             <div className="mb-3 flex items-baseline justify-between">
               <p className="nav-link">Quantity</p>
-              <span className="text-[10px] uppercase tracking-[.25em] text-muted-foreground">Max 10</span>
+              <span className="text-[10px] uppercase tracking-[.25em] text-muted-foreground">Max {maxQty}</span>
             </div>
             <div className="grid grid-cols-[3.5rem_1fr_3.5rem] items-stretch border border-foreground/70">
               <button onClick={() => setQty(Math.max(1, qty - 1))} disabled={qty <= 1} className="h-14 border-r border-border text-lg transition hover:bg-foreground hover:text-background disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-foreground" aria-label="Less">−</button>
@@ -131,7 +144,7 @@ function ProductView() {
                 <span key={qty} className="font-display text-2xl font-semibold leading-none tabular-nums animate-in fade-in slide-in-from-bottom-1">{String(qty).padStart(2, "0")}</span>
                 <span className="mt-1 text-[9px] uppercase tracking-[.3em] text-muted-foreground">{qty === 1 ? "Piece" : "Pieces"}</span>
               </div>
-              <button onClick={() => setQty(Math.min(10, qty + 1))} disabled={qty >= 10} className="h-14 border-l border-border text-lg transition hover:bg-foreground hover:text-background disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-foreground" aria-label="More">+</button>
+              <button onClick={() => setQty(Math.min(maxQty, qty + 1))} disabled={qty >= maxQty} className="h-14 border-l border-border text-lg transition hover:bg-foreground hover:text-background disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-foreground" aria-label="More">+</button>
             </div>
           </div>
 
@@ -145,7 +158,10 @@ function ProductView() {
               <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="btn btn-primary w-full">Order on Instagram</a>
             )
           ) : !soon ? (
-            <button type="button" disabled className="btn btn-ghost w-full opacity-50">Sold out</button>
+            <div className="flex flex-col gap-2">
+              <a href={`https://wa.me/${PHONE_NUMBER.replace(/\D/g, "")}?text=${encodeURIComponent(`Hi Vice! Will "${p.name}"${size ? ` in size ${size}` : ""} be restocked?`)}`} target="_blank" rel="noopener noreferrer" className="btn btn-primary w-full">Ask about restock on WhatsApp</a>
+              <a href={WHATSAPP_CHANNEL_URL} target="_blank" rel="noopener noreferrer" className="btn btn-ghost w-full">Join the channel for restock alerts</a>
+            </div>
           ) : (
             <a href={WHATSAPP_CHANNEL_URL} target="_blank" rel="noopener noreferrer" className="btn btn-primary h-auto min-h-12 w-full flex-col gap-1 py-2"><span>Notify me</span><span className="text-[10px] font-medium normal-case tracking-normal opacity-90">Follow us on the WhatsApp channel</span></a>
           )}

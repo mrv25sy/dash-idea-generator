@@ -2,7 +2,7 @@ import { Link, useLocation } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cart } from "@/lib/cart";
 import { CURRENCY, DROP_ACTIVE, ORDERING_ENABLED, INSTAGRAM_URL, WHATSAPP_CHANNEL_URL } from "@/config";
-import { instaGallery, visibleDrops, customSections, banners, resolveImage, sectionAnchor, bundles, getProduct, products, singleCategories, onSale, finalPrice, backImage, type Product, type BannerPlacement, type BannerSize } from "@/data/products";
+import { instaGallery, visibleDrops, customSections, banners, resolveImage, sectionAnchor, bundles, getProduct, products, sortByCategory, onSale, finalPrice, backImage, type Product, type BannerPlacement, type BannerSize } from "@/data/products";
 import { DropsCarousel } from "./DropsCarousel";
 import { RatingStars } from "./RatingStars";
 import { FavoriteButton } from "./FavoriteButton";
@@ -57,41 +57,40 @@ export function ProductCard({ p }: { p: Product }) {
   const back = onHome && !soon ? backImage(p.images) : undefined;
   return (
     <article className="group glass relative flex flex-col border border-border">
-      <Link to="/product/$id" params={{ id: p.id }} className="relative block aspect-[4/5] overflow-hidden bg-muted">
+      <Link to="/product/$id" params={{ id: p.id }} className="relative block aspect-square sm:aspect-[4/5] overflow-hidden bg-muted">
         <img src={p.images[0]} alt={p.name} loading="lazy" width={768} height={960} className={`h-full w-full object-cover transition-all duration-700 group-hover:scale-105 ${back ? "group-hover:opacity-0" : ""} ${soon ? "scale-110 blur-[7px]" : ""}`} />
         {back && <img src={back} alt={`${p.name} back view`} loading="lazy" width={768} height={960} className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-700 group-hover:opacity-100" />}
         {soon && <SoonLock />}
         <div className="absolute left-3 top-3 flex flex-col items-start gap-1">
-          {onSale(p) && <span className="bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-[.2em] text-destructive-foreground">Sale</span>}
-          {p.badge && <span className=" bg-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] text-primary-foreground">{p.badge}</span>}
+          {soon ? null : !available ? <span className="bg-foreground px-2 py-1 text-[9px] font-semibold uppercase tracking-[.2em] text-background sm:text-[10px]">Sold out</span>
+            : onSale(p) ? <span className="bg-destructive px-2 py-1 text-[9px] font-bold uppercase tracking-[.2em] text-destructive-foreground sm:text-[10px]">Sale</span>
+            : p.badge ? <span className="bg-primary px-2 py-1 text-[9px] font-semibold uppercase tracking-[.2em] text-primary-foreground sm:text-[10px]">{p.badge}</span> : null}
         </div>
-        {!available && !soon && <span className="absolute bottom-3 right-3 bg-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] text-primary-foreground">Sold out</span>}
       </Link>
-      <div className="flex flex-1 flex-col gap-3 p-4">
+      <div className="flex flex-1 flex-col gap-1.5 p-2.5 sm:gap-3 sm:p-4">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="min-w-0 break-words text-sm font-medium uppercase tracking-wide"><Link to="/product/$id" params={{ id: p.id }} className="hover:text-primary">{p.name}</Link></h3>
-          <PriceTag p={p} className="shrink-0 text-sm" />
+          <h3 className="min-w-0 line-clamp-2 break-words text-xs font-medium sm:text-sm uppercase tracking-wide"><Link to="/product/$id" params={{ id: p.id }} className="hover:text-primary">{p.name}</Link></h3>
+          <PriceTag p={p} className="shrink-0 text-xs sm:text-sm" />
         </div>
         <div className="flex items-center justify-between gap-2">
           <RatingStars productId={p.id} compact />
           <FavoriteButton productId={p.id} />
         </div>
         <div className="flex gap-1.5">
-          {p.colors.map((c) => <span key={c.name} title={c.name} className="h-3.5 w-3.5 rounded-full border border-border" style={{ background: c.hex }} />)}
+          {p.colors.map((c) => <span key={c.name} title={c.name} className="h-2.5 w-2.5 rounded-full sm:h-3.5 sm:w-3.5 border border-border" style={{ background: c.hex }} />)}
         </div>
         <div className="mt-auto">
           {available ? (
             ORDERING_ENABLED ? (
-              <button type="button" onClick={() => cart.addProduct(p)} className="btn btn-ghost h-10 w-full whitespace-nowrap px-2 tracking-[.14em]">Add to cart</button>
+              <button type="button" onClick={() => cart.addProduct(p)} className="btn btn-ghost h-8 w-full whitespace-nowrap px-2 text-[10px] tracking-[.1em] sm:h-10 sm:text-xs sm:tracking-[.14em]">Add to cart</button>
             ) : (
-              <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="btn btn-ghost h-10 w-full whitespace-nowrap px-2 tracking-[.14em]">Order on Instagram</a>
+              <a href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer" className="btn btn-ghost h-8 w-full whitespace-nowrap px-2 text-[10px] tracking-[.1em] sm:h-10 sm:text-xs sm:tracking-[.14em]">Order on Instagram</a>
             )
           ) : !soon ? (
-            <button type="button" disabled className="btn btn-ghost h-10 w-full whitespace-nowrap px-2 tracking-[.14em] opacity-50">Sold out</button>
+            <button type="button" disabled className="btn btn-ghost h-8 w-full whitespace-nowrap px-2 text-[10px] tracking-[.1em] sm:h-10 sm:text-xs sm:tracking-[.14em] opacity-50">Sold out</button>
           ) : (
             <a href={WHATSAPP_CHANNEL_URL} target="_blank" rel="noopener noreferrer" className="btn btn-primary h-auto min-h-10 w-full flex-col gap-0.5 px-2 py-2 tracking-[.14em]"><span>Notify me</span><span className="text-[8px] font-medium normal-case tracking-normal opacity-90">Follow us on the WhatsApp channel</span></a>
           )}
-          <p className="mt-2 h-3 text-center text-[10px] leading-3 text-muted-foreground">{!available && !soon ? "Follow us on the WhatsApp channel" : "\u00A0"}</p>
         </div>
       </div>
     </article>
@@ -191,24 +190,11 @@ export function SinglesSection() {
     <section id="singles" className={wrap}>
       <FadeUp>
         <SectionHead eyebrow="Everyday" title="Singles" sub="Hoodies, T-shirts and caps for every day." link="singles" />
-        <div className="space-y-12">
-          {[...singleCategories, ...[...new Set(items.map((p) => p.category))].filter((c) => !singleCategories.some((x) => x.category === c)).map((c) => ({ category: c, label: c.charAt(0).toUpperCase() + c.slice(1) + "s" }))].map(({ category, label }) => {
-            const categoryItems = items.filter((p) => p.category === category);
-            return (
-              <div key={category}>
-                <div className="mb-5 flex items-center gap-4 border-b border-border pb-4">
-                  <h3 className="font-display text-2xl font-semibold uppercase">{label}</h3>
-                  <span className="text-xs text-muted-foreground">{categoryItems.length} {categoryItems.length === 1 ? "piece" : "pieces"}</span>
-                </div>
-                {categoryItems.length > 0 ? (
-                  <div className={grid}>{categoryItems.map((p) => <ProductCard key={p.id} p={p} />)}</div>
-                ) : (
-                  <p className="py-6 text-sm text-muted-foreground">No {label.toLowerCase()} available right now.</p>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        {items.length > 0 ? (
+          <div className={grid}>{sortByCategory(items).map((p) => <ProductCard key={p.id} p={p} />)}</div>
+        ) : (
+          <p className="py-6 text-sm text-muted-foreground">No pieces available right now.</p>
+        )}
       </FadeUp>
     </section>
   );

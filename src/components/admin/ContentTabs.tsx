@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/store-client";
 import { storeClient } from "@/lib/store-client";
-import { BANNER_PLACEMENTS, dropClosed, loadCatalog, resolveImage, toBanner, type Banner, type BannerPlacement, type BannerSize, type CustomSection, type Drop } from "@/data/products";
+import { BANNER_PLACEMENTS, dropClosed, loadCatalog, resolveImage, toBanner, type Banner, type BannerPlacement, type BannerSize, type CustomSection, type Drop, BUILTIN_SECTIONS } from "@/data/products";
 
 const input = "h-11 w-full border border-border bg-background px-3 text-sm outline-none focus:border-primary";
 const label = "nav-link mb-1 block";
@@ -93,7 +93,7 @@ export function DropsTab() {
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <div><label className={label}>Drop name</label><input className={input} value={d.name} onChange={(e) => upd(i, { name: e.target.value })} /></div>
               <div><label className={label}>Tagline</label><input className={input} value={d.tagline} onChange={(e) => upd(i, { tagline: e.target.value })} /></div>
-              <div><label className={label}>Cover picture</label><input type="file" accept="image/*" className="text-sm" onChange={(e) => upload(i, e.target.files?.[0])} /></div>
+              <div><span className={label}>Cover picture</span><label className="btn btn-ghost inline-flex cursor-pointer">+ Upload cover<input type="file" accept="image/*" className="hidden" onChange={(e) => { void upload(i, e.target.files?.[0]); e.target.value = ""; }} /></label></div>
               <div><label className={label}>Closes at (leave empty for no timer)</label>
                 <div className="flex gap-2">
                   <input type="datetime-local" className={input} value={toLocal(d.endsAt)} onChange={(e) => upd(i, { endsAt: e.target.value ? new Date(e.target.value).toISOString() : null })} />
@@ -119,7 +119,9 @@ export function SectionsTab() {
   const [name, setName] = useState("");
   const [msg, setMsg] = useState("");
   const { rows, load } = useProducts();
-  useEffect(() => { readSetting<CustomSection[]>("sections_json", []).then(setList); }, []);
+  const [hidden, setHidden] = useState<string[]>([]);
+  useEffect(() => { readSetting<CustomSection[]>("sections_json", []).then(setList); readSetting<string[]>("hidden_sections_json", []).then(setHidden); }, []);
+  const toggleHidden = async (id: string) => { const n = hidden.includes(id) ? hidden.filter((x) => x !== id) : [...hidden, id]; setHidden(n); setMsg((await writeSetting("hidden_sections_json", n)) || "Saved."); };
   if (!list) return <p className="text-sm text-muted-foreground">Loading…</p>;
   const save = async (next: CustomSection[]) => { setList(next); setMsg((await writeSetting("sections_json", next)) || "Saved."); };
   const move = (i: number, d: number) => { const n = [...list]; const j = i + d; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j]!, n[i]!]; save(n); };
@@ -128,6 +130,17 @@ export function SectionsTab() {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Drops, Singles and Get the Fit (bundles) are built in. Add extra homepage sections here.</p>
+      <div className="glass border border-border p-4">
+        <p className="nav-link mb-2">Show on homepage</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {BUILTIN_SECTIONS.map((b) => (
+            <label key={b.id} className="flex items-center justify-between gap-3 border border-border px-3 py-2 text-sm">
+              <span>{b.label}</span>
+              <span className="flex items-center gap-2 text-xs text-muted-foreground">{hidden.includes(b.id) ? "Hidden" : "Visible"}<input type="checkbox" checked={!hidden.includes(b.id)} onChange={() => toggleHidden(b.id)} /></span>
+            </label>
+          ))}
+        </div>
+      </div>
       <form className="flex flex-col gap-2 sm:flex-row" onSubmit={(e) => { e.preventDefault(); const v = name.trim(); if (!v || list.some((s) => s.name === v)) return; save([...list, { name: v, showInNav: true }]); setName(""); }}>
         <input className={input} value={name} placeholder="Section name, e.g. Summer Picks" onChange={(e) => setName(e.target.value)} />
         <button className="btn btn-primary h-11 shrink-0">+ Add section</button>
@@ -283,6 +296,41 @@ export function InstagramTab() {
         ))}
       </div>
       {msg && <p className="text-sm text-primary">{msg}</p>}
+    </div>
+  );
+}
+
+/** Order in which Singles categories appear on the shop (first = top). */
+export function CategoryOrderEditor() {
+  const [list, setList] = useState<string[] | null>(null);
+  const [msg, setMsg] = useState("");
+  useEffect(() => {
+    (async () => {
+      const saved = await readSetting<string[]>("category_order_json", ["hoodie", "tee", "pants", "cap"]);
+      const { data } = await supabase.from("products").select("category");
+      const all = [...new Set([...saved, ...(data ?? []).map((r: { category: string }) => r.category).filter(Boolean)])];
+      setList(all);
+    })();
+  }, []);
+  if (!list) return null;
+  const move = (i: number, d: number) => { const n = [...list]; const j = i + d; if (j < 0 || j >= n.length) return; [n[i], n[j]] = [n[j]!, n[i]!]; setList(n); setMsg(""); };
+  return (
+    <div className="mb-6 border border-border p-4">
+      <p className="nav-link mb-3">Singles order on the shop</p>
+      <ol className="space-y-2">
+        {list.map((c, i) => (
+          <li key={c} className="flex items-center gap-2 text-sm">
+            <span className="w-6 text-muted-foreground">{i + 1}.</span>
+            <span className="flex-1 font-semibold uppercase">{c}</span>
+            <button className="btn btn-ghost h-8 px-3" disabled={i === 0} onClick={() => move(i, -1)} aria-label={`Move ${c} up`}>↑</button>
+            <button className="btn btn-ghost h-8 px-3" disabled={i === list.length - 1} onClick={() => move(i, 1)} aria-label={`Move ${c} down`}>↓</button>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-3 flex items-center gap-3">
+        <button className="btn btn-primary h-9 px-4" onClick={async () => setMsg((await writeSetting("category_order_json", list)) || "Saved.")}>Save order</button>
+        {msg && <span className="text-xs text-muted-foreground">{msg}</span>}
+      </div>
     </div>
   );
 }

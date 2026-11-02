@@ -316,3 +316,45 @@ input[type="file"] { max-width: 100%; }
 .sparkle-layer .s0 { background: var(--primary); } .sparkle-layer .s1 { background: oklch(0.88 0.16 90); } .sparkle-layer .s2 { background: var(--foreground); }
 @keyframes spk-fly { 0% { opacity: 0; transform: translate(0,0) scale(.3) rotate(0); } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--tx), var(--ty)) scale(1.1) rotate(220deg); } }
 @media (prefers-reduced-motion: reduce) { .sparkle-layer { display: none; } }
+
+/* Admin analytics */
+.an-panel { background: radial-gradient(120% 80% at 100% 0%, color-mix(in oklab, var(--primary) 14%, transparent), transparent 60%), var(--card); }
+.an-glow { position: absolute; inset: -40% -10% auto auto; width: 60%; height: 80%; background: radial-gradient(closest-side, color-mix(in oklab, var(--primary) 25%, transparent), transparent); filter: blur(40px); pointer-events: none; }
+.an-card { position: relative; border: 1px solid var(--border); border-radius: 1rem; padding: 1rem 1.1rem; background: color-mix(in oklab, var(--background) 70%, transparent); backdrop-filter: blur(12px); }
+.an-card-hot { border-color: color-mix(in oklab, var(--primary) 45%, transparent); box-shadow: 0 0 40px -12px color-mix(in oklab, var(--primary) 60%, transparent); }
+.an-tip { border: 1px solid var(--border); border-radius: .6rem; padding: .45rem .7rem; background: var(--popover, var(--card)); box-shadow: 0 10px 30px -10px color-mix(in oklab, var(--foreground) 30%, transparent); }
+.an-map-wrap { position: relative; perspective: 1100px; }
+.an-map { width: 100%; height: auto; transform: rotateX(28deg) rotateZ(-4deg); transform-origin: 50% 60%; filter: drop-shadow(0 30px 30px color-mix(in oklab, var(--primary) 25%, transparent)); transition: transform .6s ease; }
+.an-map-wrap:hover .an-map { transform: rotateX(18deg) rotateZ(-2deg); }
+.an-land { fill: color-mix(in oklab, var(--primary) 6%, transparent); stroke: color-mix(in oklab, var(--primary) 40%, transparent); stroke-width: 1.2; }
+.an-dot { fill: color-mix(in oklab, var(--foreground) 22%, transparent); }
+.an-node { fill: var(--primary); stroke: var(--background); stroke-width: 2; }
+.an-node-off { fill: color-mix(in oklab, var(--foreground) 35%, transparent); }
+.an-ping { fill: color-mix(in oklab, var(--primary) 35%, transparent); transform-box: fill-box; transform-origin: center; animation: an-ping 2.4s ease-out infinite; }
+.an-label { font-size: 13px; font-weight: 600; fill: var(--foreground); paint-order: stroke; stroke: var(--background); stroke-width: 3px; }
+@keyframes an-ping { 0% { transform: scale(.4); opacity: .9; } 100% { transform: scale(1.8); opacity: 0; } }
+
+/* 3D Syria orders map */
+.map3d-wrap { position: relative; overflow: hidden; border-radius: 1rem; aspect-ratio: 4 / 3; background: radial-gradient(ellipse at 50% 45%, var(--muted), var(--background)); }
+.map3d-stage { position: absolute; inset: -6% -4%; perspective: 1100px; }
+.map3d-svg { width: 100%; height: 100%; transform: rotateX(38deg) rotateZ(-8deg) scale(1.15); transform-origin: 50% 55%; }
+.map3d-neighbors path { fill: var(--muted-foreground); opacity: 0.18; stroke: var(--muted-foreground); stroke-opacity: 0.35; stroke-width: 1.5; }
+.map3d-side { fill: var(--muted-foreground); opacity: 0.35; }
+.map3d-shadow { fill: var(--foreground); opacity: 0.18; }
+.map3d-top { stroke: var(--border); stroke-width: 1; }
+.map3d-city { fill: var(--primary); opacity: 0.85; }
+.map3d-city-off { fill: var(--muted-foreground); opacity: 0.45; }
+.map3d-hub { fill: var(--primary); }
+.map3d-hub-ring { fill: none; stroke: var(--primary); stroke-width: 2; transform-box: fill-box; transform-origin: center; animation: m3pulse 2s ease-out infinite; }
+.map3d-label { font-size: 13px; font-weight: 700; fill: var(--foreground); letter-spacing: 0.05em; text-transform: uppercase; }
+.map3d-arc { fill: none; stroke: var(--primary); stroke-width: 2.5; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: m3draw 1.6s ease-out forwards; }
+.map3d-runner { fill: var(--primary-foreground); stroke: var(--primary); stroke-width: 2; }
+.map3d-ripple { fill: none; stroke: var(--primary); stroke-width: 2; opacity: 0; transform-box: fill-box; transform-origin: center; animation: m3ripple 1.6s ease-out 1.5s infinite; }
+.map3d-ripple-2 { animation-delay: 2.1s; }
+.map3d-chip { position: absolute; left: 50%; bottom: 0.9rem; transform: translateX(-50%); display: flex; align-items: center; gap: 0.6rem; white-space: nowrap; border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 0.4rem 0.9rem; font-size: 0.75rem; box-shadow: 0 8px 24px -12px var(--foreground); animation: m3chip 0.5s ease-out 1.4s both; }
+.map3d-chip-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--primary); }
+@keyframes m3draw { to { stroke-dashoffset: 0; } }
+@keyframes m3pulse { 0% { transform: scale(0.6); opacity: 1; } 100% { transform: scale(1.8); opacity: 0; } }
+@keyframes m3ripple { 0% { transform: scale(1); opacity: 0.9; } 100% { transform: scale(5); opacity: 0; } }
+@keyframes m3chip { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { .map3d-arc, .map3d-ripple, .map3d-hub-ring, .map3d-chip { animation: none; stroke-dashoffset: 0; } }

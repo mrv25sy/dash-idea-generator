@@ -5,9 +5,13 @@ import { useEffect, useState, type ReactNode } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/store-client";
 import { imageName, loadCatalog, resolveImage, withImageName } from "@/data/products";
-import { DropsTab, SectionsTab, BannersTab, InstagramTab } from "@/components/admin/ContentTabs";
+import { DropsTab, SectionsTab, BannersTab, InstagramTab, CategoryOrderEditor } from "@/components/admin/ContentTabs";
 import { BroadcastTab } from "@/components/admin/BroadcastTab";
 import { CustomersTab } from "@/components/admin/CustomersTab";
+import { CouponsTab } from "@/components/admin/CouponsTab";
+import { AnalyticsTab } from "@/components/admin/AnalyticsTab";
+import { SizeGuidesTab } from "@/components/admin/SizeGuidesTab";
+import { ThemeToggle } from "@/components/site/ThemeToggle";
 
 export const Route = createFileRoute("/admin")({
   ssr: false,
@@ -90,6 +94,8 @@ function Login() {
 }
 
 type ProductRow = {
+  stock?: number | null;
+  size_stock?: Record<string, number> | null;
   id: string; name: string; price: number; images: string[]; colors: { name: string; hex: string }[]; sizes: string[];
   category: string; type: string; drop_name: string | null; in_stock: boolean; coming_soon: boolean; badge: string | null; sort: number;
   description: string | null; details: { label: string; value: string }[]; sale_price: number | null;
@@ -98,7 +104,7 @@ type BundleRow = { id: string; name: string; product_ids: string[]; price: numbe
 type OrderRow = { id: string; order_code: string; name: string; phone: string; governorate: string; address: string; notes: string | null; items: unknown; total: number; status: string; created_at: string };
 
 function Dashboard({ email }: { email: string }) {
-  const [tab, setTab] = useState<"products" | "bundles" | "orders" | "drops" | "sections" | "banners" | "instagram" | "inbox" | "customers">("orders");
+  const [tab, setTab] = useState<"analytics" | "products" | "bundles" | "orders" | "drops" | "sections" | "banners" | "instagram" | "inbox" | "customers" | "coupons" | "sizes">("orders");
   const [rk, setRk] = useState(0);
   return (
     <div className="mx-auto w-full max-w-6xl overflow-x-hidden px-4 py-8 sm:px-5 sm:py-12">
@@ -106,24 +112,36 @@ function Dashboard({ email }: { email: string }) {
         <h1 className="font-display text-3xl font-semibold uppercase sm:text-4xl">Admin</h1>
         <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-4">
           <span className="w-full truncate text-xs text-muted-foreground sm:w-auto">{email}</span>
+          <ThemeToggle />
           <button className="btn btn-primary h-9" onClick={async () => { await loadCatalog(true); setRk((k) => k + 1); }}>↻ Refresh</button>
           <button className="btn btn-ghost h-9" onClick={() => supabase.auth.signOut()}>Sign out</button>
         </div>
       </div>
-      <div className="mb-8 flex gap-2 overflow-x-auto border-b border-border">
-        {(["orders", "customers", "products", "drops", "bundles", "sections", "banners", "instagram", "inbox"] as const).map((t) => (
-          <button key={t} onClick={() => setTab(t)} className={`nav-link -mb-px whitespace-nowrap border-b-2 px-4 py-3 ${tab === t ? "border-primary text-foreground" : "border-transparent"}`}>{t === "products" ? "Designs" : t === "inbox" ? "Messages" : t}</button>
+      <div className="mb-6 sm:hidden">
+        <label className={label}>Section</label>
+        <select value={tab} onChange={(e) => setTab(e.target.value as typeof tab)} className="h-12 w-full border border-border bg-background px-3 text-sm font-semibold uppercase outline-none focus:border-primary">
+          {(["analytics", "orders", "customers", "coupons", "products", "drops", "bundles", "sections", "banners", "sizes", "instagram", "inbox"] as const).map((t) => (
+            <option key={t} value={t}>{t === "products" ? "Designs" : t === "inbox" ? "Messages" : t === "sizes" ? "Size guides" : t.charAt(0).toUpperCase() + t.slice(1)}</option>
+          ))}
+        </select>
+      </div>
+      <div className="mb-8 hidden gap-2 overflow-x-auto border-b border-border sm:flex">
+        {(["analytics", "orders", "customers", "coupons", "products", "drops", "bundles", "sections", "banners", "sizes", "instagram", "inbox"] as const).map((t) => (
+          <button key={t} onClick={() => setTab(t)} className={`nav-link -mb-px whitespace-nowrap border-b-2 px-4 py-3 ${tab === t ? "border-primary text-foreground" : "border-transparent"}`}>{t === "products" ? "Designs" : t === "inbox" ? "Messages" : t === "sizes" ? "Size guides" : t}</button>
         ))}
       </div>
       {tab === "products" && <ProductsTab key={rk} />}
       {tab === "bundles" && <BundlesTab key={rk} />}
       {tab === "orders" && <OrdersTab key={rk} />}
+      {tab === "analytics" && <AnalyticsTab key={rk} />}
       {tab === "drops" && <DropsTab key={rk} />}
       {tab === "sections" && <SectionsTab key={rk} />}
       {tab === "banners" && <BannersTab key={rk} />}
       {tab === "instagram" && <InstagramTab key={rk} />}
       {tab === "inbox" && <BroadcastTab key={rk} />}
-      {tab === "customers" && <CustomersTab key={rk} />}
+      {tab === "coupons" && <CouponsTab key={rk} />}
+      {tab === "sizes" && <SizeGuidesTab key={rk} />}
+      {tab === "customers" && <CustomersTab key={rk} onMessage={(n) => { sessionStorage.setItem("vice-msg-to", "#" + n); setTab("inbox"); }} />}
     </div>
   );
 }
@@ -151,6 +169,7 @@ function ProductsTab() {
   if (editing) return <ProductForm initial={editing} onDone={() => { setEditing(null); after(); }} />;
   return (
     <div>
+      <CategoryOrderEditor />
       <button className="btn btn-primary mb-6" onClick={() => setEditing({ id: "", name: "", price: 0, images: [], colors: [{ name: "Black", hex: "#0d0d0d" }], sizes: ["S", "M", "L", "XL", "XXL"], category: "tee", type: "single", drop_name: null, in_stock: true, coming_soon: false, badge: null, sort: rows.length + 1, description: "", details: [], sale_price: null })}>+ Add design</button>
       <div className="grid gap-3">
         {rows.map((p) => (
@@ -305,6 +324,31 @@ function ProductForm({ initial, onDone }: { initial: ProductRow; onDone: () => v
         <span className="text-xs text-muted-foreground">"Soon" blurs the photo on the shop.</span>
       </div>
       <div>
+        {p.sizes.length > 1 ? (<>
+          <label className={label}>Pieces in stock per size (optional — empty = unlimited)</label>
+          <div className="flex flex-wrap gap-3">
+            {p.sizes.map((sz) => (
+              <div key={sz} className="w-20">
+                <span className="mb-1 block text-xs font-semibold uppercase">{sz}</span>
+                <input className={input} type="number" min={0} placeholder="∞" value={p.size_stock?.[sz] ?? ""} onChange={(e) => {
+                  const v = e.target.value === "" ? null : Math.max(0, Math.floor(Number(e.target.value)));
+                  setP((x) => {
+                    const ss = { ...(x.size_stock ?? {}) }; if (v == null) delete ss[sz]; else ss[sz] = v;
+                    const listed = x.sizes.filter((k) => typeof ss[k] === "number");
+                    const allZero = listed.length === x.sizes.length && listed.every((k) => ss[k] === 0);
+                    return { ...x, size_stock: Object.keys(ss).length ? ss : null, stock: null, ...(allZero ? { in_stock: false } : v ? (!x.coming_soon ? { in_stock: true } : {}) : {}) };
+                  });
+                }} />
+              </div>
+            ))}
+          </div>
+        </>) : (<div className="max-w-xs">
+          <label className={label}>Pieces in stock (optional — empty = unlimited)</label>
+          <input className={input} type="number" min={0} value={p.stock ?? ""} placeholder="Unlimited" onChange={(e) => { const v = e.target.value === "" ? null : Math.max(0, Math.floor(Number(e.target.value))); setP((x) => ({ ...x, stock: v, size_stock: null, ...(v != null && v > 0 && !x.coming_soon ? { in_stock: true } : {}), ...(v === 0 ? { in_stock: false } : {}) })); }} />
+        </div>)}
+        <p className="mt-1 text-xs text-muted-foreground">Goes down with every order, comes back when an order is canceled or declined. At 0 it shows Sold out. 10 or less shows "Low stock".</p>
+      </div>
+      <div>
         <label className={label}>Photos</label>
         <div className="flex flex-wrap gap-2">
           {p.images.map((src, i) => (
@@ -315,7 +359,11 @@ function ProductForm({ initial, onDone }: { initial: ProductRow; onDone: () => v
             </div>
           ))}
         </div>
-        <input type="file" accept="image/*" multiple className="mt-3 text-sm" onChange={(e) => upload(e.target.files)} />
+        <label className={`btn btn-ghost mt-3 inline-flex cursor-pointer items-center gap-2 border-dashed ${busy ? "pointer-events-none opacity-60" : ""}`}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M16 5h6"/><path d="M19 2v6"/><path d="M21 11.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7.5"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/><circle cx="9" cy="9" r="2"/></svg>
+          {busy ? "Uploading…" : "+ Add photos"}
+          <input type="file" accept="image/*" multiple className="hidden" disabled={busy} onChange={(e) => { void upload(e.target.files); e.target.value = ""; }} />
+        </label>
         <p className="mt-1 text-xs text-muted-foreground">Name each photo (e.g. Front, Back, Detail). Names show on the product page. The photo named "Back" (or the 2nd photo) shows when hovering a product on the home page.</p>
       </div>
       {err && <p className="text-sm text-primary">{err}</p>}
@@ -410,14 +458,16 @@ function OrdersTab() {
   };
   useEffect(() => { load(); }, []);
   const norm = (s: string) => { const n = s.charAt(0).toUpperCase() + s.slice(1).toLowerCase(); return n === "Delivered" ? "Completed" : n; };
+  const locked = (o: OrderRow) => norm(o.status) === "Canceled";
   const quick = async (o: OrderRow, status: string) => {
+    if (locked(o)) return alert("The customer canceled this order. Its status can't be changed.");
     const { error } = await supabase.from("orders").update({ status }).eq("id", o.id);
     if (error) return alert(error.message);
     load();
   };
   const saveStatus = async (o: OrderRow) => {
     const status = drafts[o.id];
-    if (!status) return;
+    if (!status || locked(o)) return;
     const { error } = await supabase.from("orders").update({ status }).eq("id", o.id);
     if (error) return alert(error.message);
     setDrafts((d) => { const n = { ...d }; delete n[o.id]; return n; });
@@ -436,7 +486,16 @@ function OrdersTab() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center gap-2">
+      <div className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:hidden">
+        <select value={filter} onChange={(e) => setFilter(e.target.value)} className="h-11 min-w-0 border border-border bg-background px-3 text-sm outline-none focus:border-primary">
+          {["All", ...STATUSES, "Canceled", "Archived"].map((s) => (
+            <option key={s} value={s}>{s === "Canceled" ? "Canceled by customer" : s} ({s === "All" ? active.length : rows.filter((o) => norm(o.status) === s).length})</option>
+          ))}
+        </select>
+        <button onClick={load} disabled={busy} aria-label="Refresh orders" className="btn btn-primary h-11 px-4 text-sm">{busy ? "…" : "↻"}</button>
+        {updated && <span className="col-span-2 text-xs text-muted-foreground">Last checked {updated}</span>}
+      </div>
+      <div className="mb-6 hidden flex-wrap items-center gap-2 sm:flex">
         {["All", ...STATUSES, "Canceled", "Archived"].map((s) => (
           <button key={s} onClick={() => setFilter(s)} className={`btn h-9 px-3 text-[10px] ${filter === s ? "btn-primary" : "btn-ghost"}`}>
             {s === "Canceled" ? "Canceled by customer" : s} ({s === "All" ? active.length : rows.filter((o) => norm(o.status) === s).length})
@@ -450,24 +509,26 @@ function OrdersTab() {
         {shown.map((o) => {
           const all = Array.isArray(o.items) ? (o.items as { kind: string; image?: string }[]) : [];
           const receipt = all.find((x) => x.kind === "receipt")?.image;
-          const items = Array.isArray(o.items) ? (all.filter((x) => x.kind !== "receipt") as { kind: string; qty: number; unitPrice: number; pieces: { name: string; size: string; color: string }[] }[]) : [];
+          const ship = all.find((x) => x.kind === "shipping") as { company?: string; branch?: string } | undefined;
+          const items = Array.isArray(o.items) ? (all.filter((x) => Array.isArray((x as { pieces?: unknown }).pieces)) as { kind: string; qty: number; unitPrice: number; pieces: { name: string; size: string; color: string }[] }[]) : [];
           const current = drafts[o.id] ?? norm(o.status);
           const dirty = drafts[o.id] && drafts[o.id] !== norm(o.status);
           return (
             <div key={o.id} className="glass border border-border p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                 <div>
                   <p className="font-display text-lg font-semibold">{o.order_code} · ${o.total}</p>
                   <p className="text-xs text-muted-foreground">Ordered {new Date(o.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</p>
                   <div className="mt-2"><StatusBadge s={norm(o.status)} /></div>
-                  {norm(o.status) === "Canceled" && <p className="mt-1 text-xs font-semibold text-destructive">Customer canceled this order — refund needed</p>}
+                  {norm(o.status) === "Canceled" && <p className="mt-1 text-xs font-semibold text-destructive">Customer canceled this order — refund needed. Status is locked.</p>}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                 {norm(o.status) === "Pending" && <>
                   <button onClick={() => quick(o, "Confirmed")} className="btn btn-ghost h-9 px-3 text-[10px]">✓ Confirm</button>
                   <button onClick={() => quick(o, "Declined")} className="btn h-9 bg-red-600 px-3 text-[10px] text-white">✕ Decline</button>
                 </>}
-                <select value={current} onChange={(e) => setDrafts((d) => ({ ...d, [o.id]: e.target.value }))} className="h-9 border border-border bg-background px-2 text-sm">
+                {locked(o) ? <span className="inline-flex h-9 items-center gap-1.5 border border-border bg-muted px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">🔒 Locked · canceled by customer</span> : <>
+                <select value={current} onChange={(e) => setDrafts((d) => ({ ...d, [o.id]: e.target.value }))} className="h-9 min-w-0 flex-1 sm:flex-none border border-border bg-background px-2 text-sm">
                   {current === "Canceled" && <option value="Canceled" disabled>Canceled by customer</option>}
                   {STATUSES.map((s) => <option key={s}>{s}</option>)}
                 </select>
@@ -476,6 +537,7 @@ function OrdersTab() {
                 {norm(o.status) === "Archived"
                   ? <button onClick={() => quick(o, "Pending")} className="btn btn-ghost h-9 px-3 text-[10px]">Unarchive</button>
                   : <button onClick={() => quick(o, "Archived")} className="btn btn-ghost h-9 px-3 text-[10px]">Archive</button>}
+                </>}
                 <button onClick={() => removeOrder(o)} className="btn btn-ghost h-9 px-3 text-[10px] text-destructive">Delete</button>
                 </div>
               </div>
@@ -483,6 +545,7 @@ function OrdersTab() {
                 <p><span className="text-muted-foreground">Name:</span> {o.name}</p>
                 <p><span className="text-muted-foreground">Phone:</span> <a className="underline" href={`https://wa.me/${o.phone.replace(/\D/g, "")}`} target="_blank" rel="noopener noreferrer">{o.phone}</a></p>
                 <p><span className="text-muted-foreground">Governorate:</span> {o.governorate}</p>
+                {ship && <p className="sm:col-span-2" dir="auto"><span className="text-muted-foreground">Shipping:</span> {ship.company} — {ship.branch}</p>}
                 <p><span className="text-muted-foreground">Address:</span> {o.address}</p>
                 {o.notes && <p className="sm:col-span-2"><span className="text-muted-foreground">Notes:</span> {o.notes}</p>}
               </div>

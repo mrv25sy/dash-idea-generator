@@ -1,6 +1,6 @@
 // Client-side cart store, saved in localStorage. No backend.
 import { useSyncExternalStore } from "react";
-import { bundles, finalPrice, getProduct, type Product } from "@/data/products";
+import { bundles, finalPrice, getProduct, stockFor, type Product } from "@/data/products";
 
 export type Piece = { productId: string; color: string; size: string };
 export type CartLine = {
@@ -11,7 +11,7 @@ export type CartLine = {
   qty: number;
   unitPrice: number;
 };
-export type Customer = { name: string; phone: string; governorate: string; address: string; notes: string };
+export type Customer = { name: string; first: string; father: string; family: string; phone: string; governorate: string; address: string; notes: string; company: string; area: string; branch: string; shipDetails: string };
 
 type State = { lines: CartLine[]; open: boolean; notices: string[]; restore: CartLine[] | null; ready: boolean };
 
@@ -135,16 +135,34 @@ export function useCart() {
   );
 }
 
+/** Lines whose requested pieces exceed stock (counted per product+size across the cart). */
+export function stockProblems(lines: CartLine[]): { name: string; size: string; want: number; left: number }[] {
+  const want = new Map<string, number>();
+  for (const l of lines) for (const pc of l.pieces) { const k = pc.productId + "|" + pc.size; want.set(k, (want.get(k) ?? 0) + l.qty); }
+  const out: { name: string; size: string; want: number; left: number }[] = [];
+  for (const [k, n] of want) {
+    const [id, size] = k.split("|") as [string, string];
+    const p = getProduct(id); if (!p) continue;
+    const left = stockFor(p, size);
+    if (left != null && n > left) out.push({ name: p.name, size, want: n, left });
+  }
+  return out;
+}
+
 export const lineTotal = (l: CartLine) => l.unitPrice * l.qty;
 export const cartCount = (lines: CartLine[]) => lines.reduce((s, l) => s + l.qty * l.pieces.length, 0);
 
-export const emptyCustomer: Customer = { name: "", phone: "", governorate: "", address: "", notes: "" };
+export const emptyCustomer: Customer = { name: "", first: "", father: "", family: "", phone: "", governorate: "", address: "", notes: "", company: "qadmous", area: "", branch: "", shipDetails: "" };
 export function loadCustomer(): Customer {
-  try { return { ...emptyCustomer, ...JSON.parse(localStorage.getItem(CUSTOMER_KEY) || "{}") }; } catch { return emptyCustomer; }
+  try {
+    const c = { ...emptyCustomer, ...JSON.parse(localStorage.getItem(CUSTOMER_KEY) || "{}") };
+    return GOVERNORATES.includes(c.governorate) ? c : { ...c, governorate: "", area: "", branch: "" };
+  } catch { return emptyCustomer; }
 }
 export function saveCustomer(c: Customer) { localStorage.setItem(CUSTOMER_KEY, JSON.stringify(c)); }
 
+// Governorates offered at checkout.
 export const GOVERNORATES = [
-  "Damascus", "Rif Dimashq", "Aleppo", "Homs", "Hama", "Latakia", "Tartus",
-  "Idlib", "Daraa", "As-Suwayda", "Quneitra", "Deir ez-Zor", "Raqqa", "Al-Hasakah",
+  "Damascus", "Rif Dimashq", "Aleppo", "Homs", "Hama", "Latakia", "Tartus", "Daraa",
+  "Idlib", "As-Suwayda", "Quneitra", "Deir ez-Zor", "Raqqa", "Al-Hasakah",
 ];

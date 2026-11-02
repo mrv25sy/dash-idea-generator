@@ -9,6 +9,7 @@ import { CURRENCY } from "@/config";
 import { useFavorites } from "@/components/site/FavoriteButton";
 import { ProductCard } from "@/components/site/Sections";
 import { getProduct, loadCatalog } from "@/data/products";
+import { customerNumber } from "@/lib/coupons";
 
 export const Route = createFileRoute("/account")({
   ssr: false,
@@ -39,9 +40,44 @@ function AccountPage() {
   if (!ready) return <div className="p-10 text-center text-muted-foreground">Loading…</div>;
   return (
     <main className="mx-auto max-w-2xl px-5 py-12">
-      {session ? <Profile session={session} /> : <AuthForm />}
+      {session ? <Profile session={session} /> : <><AuthForm /><DeviceOrders /></>}
       <p className="mt-10 text-center text-sm text-muted-foreground">An account is optional — you can always order as a guest. <Link to="/shop" className="text-primary underline">Back to shop</Link></p>
     </main>
+  );
+}
+
+const cleanUsername = (s: string) => s.toLowerCase().replace(/[^a-z0-9_.]/g, "").slice(0, 20);
+
+function ChangePassword({ email }: { email: string }) {
+  const [cur, setCur] = useState("");
+  const [a, setA] = useState("");
+  const [b, setB] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault(); setMsg("");
+    if (a.length < 6) return setMsg("New password must be at least 6 characters.");
+    if (a !== b) return setMsg("Passwords do not match.");
+    setBusy(true);
+    // Confirm the current password first so only the account owner can change it.
+    const { error: authErr } = await supabase.auth.signInWithPassword({ email, password: cur });
+    if (authErr) { setBusy(false); return setMsg("Current password is wrong."); }
+    const { error } = await supabase.auth.updateUser({ password: a, current_password: cur } as any);
+    setBusy(false);
+    if (error) return setMsg(error.message);
+    setCur(""); setA(""); setB(""); setMsg("Password updated ✓");
+  };
+  return (
+    <form onSubmit={submit} className="space-y-3 border border-border p-5">
+      <h2 className="nav-link">Change password</h2>
+      <input className={input} type="password" required placeholder="Current password" value={cur} onChange={(e) => setCur(e.target.value)} />
+      <input className={input} type="password" required minLength={6} placeholder="New password" value={a} onChange={(e) => setA(e.target.value)} />
+      <input className={input} type="password" required minLength={6} placeholder="Confirm new password" value={b} onChange={(e) => setB(e.target.value)} />
+      <div className="flex items-center gap-3">
+        <button disabled={busy} className="bg-primary px-5 py-2 font-semibold uppercase text-primary-foreground disabled:opacity-60">{busy ? "…" : "Update password"}</button>
+        <span className="text-sm text-muted-foreground">{msg}</span>
+      </div>
+    </form>
   );
 }
 
@@ -49,6 +85,8 @@ function AuthForm() {
   const [mode, setMode] = useState<"in" | "up">("in");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [msg, setMsg] = useState("");
@@ -66,45 +104,41 @@ function AuthForm() {
       if (error) setMsg(error.message);
       return;
     }
+    if (username.length < 3) { setBusy(false); return setMsg("Username must be at least 3 characters."); }
+    if (pw !== pw2) { setBusy(false); return setMsg("Passwords do not match."); }
     const { data, error } = await supabase.auth.signUp({
       email, password: pw,
-      options: { data: { full_name: name.trim(), phone: phone.trim() } },
+      options: { emailRedirectTo: `${window.location.origin}/account`, data: { username, full_name: name.trim(), phone: phone.trim() } },
     });
     if (!error && data.session && data.user) await saveProfile(data.user.id);
     setBusy(false);
     if (error) return setMsg(error.message);
-    if (!data.session) { setCodeStep(true); setMsg(`We sent a 6-digit code to ${email}.`); }
-  };
-  const verify = async (e: React.FormEvent) => {
-    e.preventDefault(); setBusy(true); setMsg("");
-    const { data, error } = await supabase.auth.verifyOtp({ email, token: code.trim(), type: "signup" });
-    if (!error && data.user) await saveProfile(data.user.id);
-    setBusy(false);
-    if (error) setMsg("That code is wrong or expired. Try again or resend.");
+    if (!data.session) { setCodeStep(true); setMsg(""); }
   };
   const resend = async () => {
-    const { error } = await supabase.auth.resend({ type: "signup", email });
-    setMsg(error ? error.message : "New code sent.");
+    const { error } = await supabase.auth.resend({ type: "signup", email, options: { emailRedirectTo: `${window.location.origin}/account` } });
+    setMsg(error ? error.message : "New confirmation email sent.");
   };
   if (codeStep) return (
-    <form onSubmit={verify} className="space-y-4 border border-border p-6">
-      <h1 className="font-display text-3xl font-bold uppercase">Confirm your email</h1>
-      <input className={`${input} text-center text-2xl tracking-[.5em]`} inputMode="numeric" autoComplete="one-time-code" maxLength={8} required placeholder="••••••" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))} />
+    <div className="space-y-4 border border-border p-6">
+      <h1 className="font-display text-3xl font-bold uppercase">Check your email</h1>
+      <p className="text-sm text-muted-foreground">We sent a confirmation link to <span className="font-semibold text-foreground">{email}</span>. Open it and tap <span className="font-semibold text-foreground">Confirm email address</span> to activate your account. Check your spam folder if you don't see it.</p>
       {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
-      <button disabled={busy || code.length < 6} className="w-full bg-primary py-3 font-semibold uppercase text-primary-foreground disabled:opacity-60">{busy ? "…" : "Confirm"}</button>
       <div className="flex justify-between text-sm">
-        <button type="button" onClick={resend} className="text-primary underline">Resend code</button>
-        <button type="button" onClick={() => { setCodeStep(false); setCode(""); setMsg(""); }} className="text-primary underline">Change email</button>
+        <button type="button" onClick={resend} className="text-primary underline">Resend email</button>
+        <button type="button" onClick={() => { setCodeStep(false); setMsg(""); }} className="text-primary underline">Change email</button>
       </div>
-    </form>
+    </div>
   );
   return (
     <form onSubmit={submit} className="space-y-4 border border-border p-6">
       <h1 className="font-display text-3xl font-bold uppercase">{mode === "in" ? "Sign in" : "Create account"}</h1>
+      {mode === "up" && <input className={input} required minLength={3} maxLength={20} placeholder="Username" value={username} onChange={(e) => setUsername(cleanUsername(e.target.value))} />}
       {mode === "up" && <input className={input} required placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />}
       {mode === "up" && <input className={input} type="tel" placeholder="Phone (optional)" value={phone} onChange={(e) => setPhone(e.target.value)} />}
       <input className={input} type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
       <input className={input} type="password" required minLength={6} placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} />
+      {mode === "up" && <input className={input} type="password" required minLength={6} placeholder="Confirm password" value={pw2} onChange={(e) => setPw2(e.target.value)} />}
       {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
       <button disabled={busy} className="w-full bg-primary py-3 font-semibold uppercase text-primary-foreground disabled:opacity-60">{busy ? "…" : mode === "in" ? "Sign in" : "Sign up"}</button>
       <button type="button" onClick={() => setMode(mode === "in" ? "up" : "in")} className="w-full text-sm text-primary underline">
@@ -115,6 +149,36 @@ function AuthForm() {
 }
 
 type Order = { order_code: string; status: string; total: number; created_at: string };
+
+// Orders placed as a guest are remembered on this device; live status comes from the store.
+function DeviceOrders() {
+  const [list, setList] = useState<{ id: string; date: string; total: number; items: string[]; status: string; token?: string }[]>([]);
+  const [live, setLive] = useState<Record<string, string>>({});
+  useEffect(() => {
+    let h: typeof list = [];
+    try { h = JSON.parse(localStorage.getItem("vice-order-history") || "[]"); } catch { h = []; }
+    if (!Array.isArray(h) || !h.length) return;
+    setList(h);
+    void (supabase.rpc as any)("order_statuses", { tokens: h.map((o) => o.token).filter(Boolean) }).then(({ data }: { data: { order_code: string; status: string }[] | null }) => {
+      setLive(Object.fromEntries((data ?? []).map((r) => [r.order_code, r.status])));
+    });
+  }, []);
+  if (!list.length) return null;
+  return (
+    <section className="mt-8 space-y-3">
+      <h2 className="nav-link">Orders on this device</h2>
+      <p className="text-xs text-muted-foreground">Orders you placed without an account. Open the cart → My orders for receipts and cancelling.</p>
+      <ul className="divide-y divide-border border border-border">
+        {list.map((o) => (
+          <li key={o.id} className="flex items-center justify-between p-3 text-sm">
+            <div><p className="font-semibold">{o.id}</p><p className="text-muted-foreground">{o.date} · {money(Number(o.total))}</p></div>
+            <StatusBadge s={normStatus(live[o.id] ?? o.status ?? "Pending")} />
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 function Favorites() {
   const { ids } = useFavorites();
@@ -133,7 +197,7 @@ function Favorites() {
 
 function Profile({ session }: { session: Session }) {
   const uid = session.user.id;
-  const [p, setP] = useState({ full_name: "", phone: "", governorate: "", address: "", avatar_url: "" });
+  const [p, setP] = useState({ username: "", full_name: "", phone: "", governorate: "", address: "", avatar_url: "" });
   const [orders, setOrders] = useState<Order[]>([]);
   const [saved, setSaved] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -147,12 +211,12 @@ function Profile({ session }: { session: Session }) {
     const meta = (u?.user?.user_metadata ?? session.user.user_metadata ?? {}) as Record<string, string | undefined>;
     const pr = (prof ?? {}) as Record<string, string | null | undefined>;
     const pick = (k: string) => pr[k] || meta[k] || "";
-    setP({ full_name: pick("full_name"), phone: pick("phone"), governorate: pick("governorate"), address: pick("address"), avatar_url: pick("avatar_url") });
+    setP({ username: meta["username"] || "", full_name: pick("full_name"), phone: pick("phone"), governorate: pick("governorate"), address: pick("address"), avatar_url: pick("avatar_url") });
     setOrders(ord ?? []);
   };
   useEffect(() => { void load(); }, [uid]);
   const save = async (next = p, quiet = false) => {
-    const clean = { full_name: next.full_name.trim(), phone: next.phone.trim(), governorate: next.governorate, address: next.address.trim(), avatar_url: next.avatar_url };
+    const clean = { username: next.username.trim(), full_name: next.full_name.trim(), phone: next.phone.trim(), governorate: next.governorate, address: next.address.trim(), avatar_url: next.avatar_url };
     const { error: metaErr } = await supabase.auth.updateUser({ data: clean });
     const row = { id: uid, full_name: clean.full_name || null, phone: clean.phone || null, governorate: clean.governorate || null, address: clean.address || null, updated_at: new Date().toISOString() };
     let { error } = await storeClient.from("profiles").upsert({ ...row, avatar_url: clean.avatar_url || null }, { onConflict: "id" });
@@ -189,8 +253,10 @@ function Profile({ session }: { session: Session }) {
           {p.avatar_url ? <img src={p.avatar_url} alt="Profile photo" className="h-full w-full object-cover" /> : initials}
         </div>
         <div className="min-w-0">
-          <p className="truncate font-semibold">{p.full_name || "Your name"}</p>
+          <p className="truncate font-semibold">{p.full_name || "Your name"} <span className="ml-1 bg-primary px-1.5 py-0.5 font-mono text-[11px] text-primary-foreground">#{customerNumber(uid)}</span></p>
+          {p.username && <p className="truncate text-sm font-medium">@{p.username}</p>}
           <p className="truncate text-sm text-muted-foreground">{session.user.email}</p>
+          <p className="text-xs text-muted-foreground">Your customer number — share it with us for personal offers.</p>
           <label className="mt-2 inline-block cursor-pointer text-sm text-primary underline">
             {uploading ? "Uploading…" : p.avatar_url ? "Change photo" : "Add photo"}
             <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) void uploadAvatar(f); e.target.value = ""; }} />
@@ -199,6 +265,7 @@ function Profile({ session }: { session: Session }) {
       </section>
       <section className="space-y-3 border border-border p-5">
         <h2 className="nav-link">My details</h2>
+        <input className={input} placeholder="Username" value={p.username} onChange={(e) => setP({ ...p, username: cleanUsername(e.target.value) })} />
         <input className={input} placeholder="Full name" value={p.full_name} onChange={(e) => setP({ ...p, full_name: e.target.value })} />
         <input className={input} placeholder="Phone" value={p.phone} onChange={(e) => setP({ ...p, phone: e.target.value })} />
         <select className={input} value={p.governorate} onChange={(e) => setP({ ...p, governorate: e.target.value })}>
@@ -212,6 +279,7 @@ function Profile({ session }: { session: Session }) {
           <span className="text-sm text-muted-foreground">{saved}</span>
         </div>
       </section>
+      <ChangePassword email={session.user.email ?? ""} />
       <Favorites />
       <section className="space-y-3">
         <div className="flex items-center justify-between">

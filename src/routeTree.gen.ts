@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as ShippingRouteImport } from './routes/shipping'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as DropNameRouteImport } from './routes/drop.$name'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
@@ -29,6 +30,11 @@ const AccountRoute = AccountRouteImport.update({
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShippingRoute = ShippingRouteImport.update({
+  id: '/shipping',
+  path: '/shipping',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ShopRoute = ShopRouteImport.update({
@@ -51,6 +57,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
+  '/shipping': typeof ShippingRoute
   '/shop': typeof ShopRoute
   '/drop/$name': typeof DropNameRoute
   '/product/$id': typeof ProductIdRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
+  '/shipping': typeof ShippingRoute
   '/shop': typeof ShopRoute
   '/drop/$name': typeof DropNameRoute
   '/product/$id': typeof ProductIdRoute
@@ -68,6 +76,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/account': typeof AccountRoute
   '/admin': typeof AdminRoute
+  '/shipping': typeof ShippingRoute
   '/shop': typeof ShopRoute
   '/drop/$name': typeof DropNameRoute
   '/product/$id': typeof ProductIdRoute
@@ -75,14 +84,28 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/account' | '/admin' | '/shop' | '/drop/$name' | '/product/$id'
+    | '/'
+    | '/account'
+    | '/admin'
+    | '/shipping'
+    | '/shop'
+    | '/drop/$name'
+    | '/product/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/account' | '/admin' | '/shop' | '/drop/$name' | '/product/$id'
+  to:
+    | '/'
+    | '/account'
+    | '/admin'
+    | '/shipping'
+    | '/shop'
+    | '/drop/$name'
+    | '/product/$id'
   id:
     | '__root__'
     | '/'
     | '/account'
     | '/admin'
+    | '/shipping'
     | '/shop'
     | '/drop/$name'
     | '/product/$id'
@@ -92,6 +115,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountRoute: typeof AccountRoute
   AdminRoute: typeof AdminRoute
+  ShippingRoute: typeof ShippingRoute
   ShopRoute: typeof ShopRoute
   DropNameRoute: typeof DropNameRoute
   ProductIdRoute: typeof ProductIdRoute
@@ -118,6 +142,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shipping': {
+      id: '/shipping'
+      path: '/shipping'
+      fullPath: '/shipping'
+      preLoaderRoute: typeof ShippingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/shop': {
@@ -148,6 +179,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountRoute: AccountRoute,
   AdminRoute: AdminRoute,
+  ShippingRoute: ShippingRoute,
   ShopRoute: ShopRoute,
   DropNameRoute: DropNameRoute,
   ProductIdRoute: ProductIdRoute,
