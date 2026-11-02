@@ -53,6 +53,7 @@ function ChangePassword({ email }: { email: string }) {
   const [a, setA] = useState("");
   const [b, setB] = useState("");
   const [msg, setMsg] = useState("");
+  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setMsg("");
@@ -67,9 +68,18 @@ function ChangePassword({ email }: { email: string }) {
     if (error) return setMsg(error.message);
     setCur(""); setA(""); setB(""); setMsg("Password updated ✓");
   };
+  if (!open) return (
+    <section className="flex items-center justify-between border border-border p-5">
+      <h2 className="nav-link">Password</h2>
+      <button type="button" onClick={() => { setOpen(true); setMsg(""); }} className="border border-border px-4 py-2 text-sm font-semibold uppercase hover:bg-muted">Change password</button>
+    </section>
+  );
   return (
     <form onSubmit={submit} className="space-y-3 border border-border p-5">
-      <h2 className="nav-link">Change password</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="nav-link">Change password</h2>
+        <button type="button" onClick={() => { setOpen(false); setCur(""); setA(""); setB(""); }} className="text-sm text-muted-foreground underline">Cancel</button>
+      </div>
       <input className={input} type="password" required placeholder="Current password" value={cur} onChange={(e) => setCur(e.target.value)} />
       <input className={input} type="password" required minLength={6} placeholder="New password" value={a} onChange={(e) => setA(e.target.value)} />
       <input className={input} type="password" required minLength={6} placeholder="Confirm new password" value={b} onChange={(e) => setB(e.target.value)} />
@@ -86,7 +96,6 @@ function AuthForm() {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
-  const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [msg, setMsg] = useState("");
