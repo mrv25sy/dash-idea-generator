@@ -26,9 +26,9 @@ export function Navbar() {
   const isAdmin = useRouterState({ select: (s) => s.location.pathname.startsWith("/admin") });
   return (
     <header className="glass sticky top-0 z-40 border-b border-border">
-      <nav className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:px-8">
+      <nav className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:px-8">
         <Link to="/" hash="" aria-label="Vice home" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}><Logo className="h-9 w-5 shrink-0" /></Link>
-        <ul className="hidden gap-10 md:flex">
+        <ul className="absolute left-1/2 hidden -translate-x-1/2 gap-10 md:flex">
           {links.map((l) => (
              <li key={l.label}><Link to={l.to} search={l.search ?? {}} hash={l.hash ?? ""} className="nav-link">{l.label}</Link></li>
           ))}
