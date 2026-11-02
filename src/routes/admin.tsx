@@ -456,20 +456,34 @@ function OrdersTab() {
     setUpdated(new Date().toLocaleTimeString());
     setBusy(false);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    // Keep the list fresh so customer cancellations show up without a manual refresh.
+    const t = setInterval(() => { if (document.visibilityState === "visible") load(); }, 15000);
+    return () => clearInterval(t);
+  }, []);
   const norm = (s: string) => { const n = s.charAt(0).toUpperCase() + s.slice(1).toLowerCase(); return n === "Delivered" ? "Completed" : n; };
   const locked = (o: OrderRow) => norm(o.status) === "Canceled";
+  // Only updates the order if it is not canceled in the database right now,
+  // so a stale screen can never overwrite a customer's cancellation.
+  const guardedUpdate = async (o: OrderRow, status: string) => {
+    const { data, error } = await supabase.from("orders").update({ status }).eq("id", o.id).not("status", "ilike", "canceled").select("id");
+    if (error) { alert(error.message); return false; }
+    if (!data || data.length === 0) {
+      alert(`Order ${o.order_code} was canceled by the customer. Its status can't be changed.`);
+      load();
+      return false;
+    }
+    return true;
+  };
   const quick = async (o: OrderRow, status: string) => {
     if (locked(o)) return alert("The customer canceled this order. Its status can't be changed.");
-    const { error } = await supabase.from("orders").update({ status }).eq("id", o.id);
-    if (error) return alert(error.message);
-    load();
+    if (await guardedUpdate(o, status)) load();
   };
   const saveStatus = async (o: OrderRow) => {
     const status = drafts[o.id];
     if (!status || locked(o)) return;
-    const { error } = await supabase.from("orders").update({ status }).eq("id", o.id);
-    if (error) return alert(error.message);
+    if (!(await guardedUpdate(o, status))) return;
     setDrafts((d) => { const n = { ...d }; delete n[o.id]; return n; });
     setSavedId(o.id); setTimeout(() => setSavedId(""), 2000);
     load();
