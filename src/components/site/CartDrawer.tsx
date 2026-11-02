@@ -75,6 +75,21 @@ export function CartDrawer() {
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
+      // Signed-in customers see every order saved on their account, from any device.
+      const { data: rows } = await storeClient.from("orders").select("*").eq("user_id", u.user.id).order("created_at", { ascending: false });
+      if (rows?.length) {
+        setHistory((local) => {
+          const byId = new Map(local.map((o) => [o.id, o]));
+          for (const r of rows as any[]) {
+            const prev = byId.get(r.order_code);
+            const items: string[] = Array.isArray(r.items) ? r.items.map((i: any) => typeof i === "string" ? i : `${i?.name ?? "Item"}${i?.size ? ` (${i.size})` : ""}${i?.qty ? ` ×${i.qty}` : ""}`) : prev?.items ?? [];
+            byId.set(r.order_code, { id: r.order_code, date: prev?.date ?? new Date(r.created_at).toLocaleString(), total: Number(r.total), items, status: normStatus(r.status), token: prev?.token ?? r.token ?? undefined });
+          }
+          const merged = [...byId.values()].sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true }));
+          saveHistory(merged);
+          return merged;
+        });
+      }
       // Address is intentionally never auto-filled — customers type it for every order.
       const { data: p } = await storeClient.from("profiles").select("full_name,phone").eq("id", u.user.id).maybeSingle();
       if (p) setForm((f) => ({ ...f, name: f.name || p.full_name || "", phone: f.phone || p.phone || "" }));

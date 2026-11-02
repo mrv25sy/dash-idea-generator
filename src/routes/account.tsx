@@ -53,6 +53,7 @@ function ChangePassword({ email }: { email: string }) {
   const [a, setA] = useState("");
   const [b, setB] = useState("");
   const [msg, setMsg] = useState("");
+  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const submit = async (e: React.FormEvent) => {
     e.preventDefault(); setMsg("");
@@ -67,9 +68,18 @@ function ChangePassword({ email }: { email: string }) {
     if (error) return setMsg(error.message);
     setCur(""); setA(""); setB(""); setMsg("Password updated ✓");
   };
+  if (!open) return (
+    <section className="flex items-center justify-between border border-border p-5">
+      <h2 className="nav-link">Password</h2>
+      <button type="button" onClick={() => { setOpen(true); setMsg(""); }} className="border border-border px-4 py-2 text-sm font-semibold uppercase hover:bg-muted">Change password</button>
+    </section>
+  );
   return (
     <form onSubmit={submit} className="space-y-3 border border-border p-5">
-      <h2 className="nav-link">Change password</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="nav-link">Change password</h2>
+        <button type="button" onClick={() => { setOpen(false); setCur(""); setA(""); setB(""); }} className="text-sm text-muted-foreground underline">Cancel</button>
+      </div>
       <input className={input} type="password" required placeholder="Current password" value={cur} onChange={(e) => setCur(e.target.value)} />
       <input className={input} type="password" required minLength={6} placeholder="New password" value={a} onChange={(e) => setA(e.target.value)} />
       <input className={input} type="password" required minLength={6} placeholder="Confirm new password" value={b} onChange={(e) => setB(e.target.value)} />
@@ -86,7 +96,6 @@ function AuthForm() {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
-  const [username, setUsername] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [msg, setMsg] = useState("");
@@ -104,11 +113,10 @@ function AuthForm() {
       if (error) setMsg(error.message);
       return;
     }
-    if (username.length < 3) { setBusy(false); return setMsg("Username must be at least 3 characters."); }
     if (pw !== pw2) { setBusy(false); return setMsg("Passwords do not match."); }
     const { data, error } = await supabase.auth.signUp({
       email, password: pw,
-      options: { emailRedirectTo: `${window.location.origin}/account`, data: { username, full_name: name.trim(), phone: phone.trim() } },
+      options: { emailRedirectTo: `${window.location.origin}/account`, data: { full_name: name.trim(), phone: phone.trim() } },
     });
     if (!error && data.session && data.user) await saveProfile(data.user.id);
     setBusy(false);
@@ -133,7 +141,6 @@ function AuthForm() {
   return (
     <form onSubmit={submit} className="space-y-4 border border-border p-6">
       <h1 className="font-display text-3xl font-bold uppercase">{mode === "in" ? "Sign in" : "Create account"}</h1>
-      {mode === "up" && <input className={input} required minLength={3} maxLength={20} placeholder="Username" value={username} onChange={(e) => setUsername(cleanUsername(e.target.value))} />}
       {mode === "up" && <input className={input} required placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />}
       {mode === "up" && <input className={input} type="tel" placeholder="Phone (optional)" value={phone} onChange={(e) => setPhone(e.target.value)} />}
       <input className={input} type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -254,7 +261,6 @@ function Profile({ session }: { session: Session }) {
         </div>
         <div className="min-w-0">
           <p className="truncate font-semibold">{p.full_name || "Your name"} <span className="ml-1 bg-primary px-1.5 py-0.5 font-mono text-[11px] text-primary-foreground">#{customerNumber(uid)}</span></p>
-          {p.username && <p className="truncate text-sm font-medium">@{p.username}</p>}
           <p className="truncate text-sm text-muted-foreground">{session.user.email}</p>
           <p className="text-xs text-muted-foreground">Your customer number — share it with us for personal offers.</p>
           <label className="mt-2 inline-block cursor-pointer text-sm text-primary underline">
@@ -265,7 +271,6 @@ function Profile({ session }: { session: Session }) {
       </section>
       <section className="space-y-3 border border-border p-5">
         <h2 className="nav-link">My details</h2>
-        <input className={input} placeholder="Username" value={p.username} onChange={(e) => setP({ ...p, username: cleanUsername(e.target.value) })} />
         <input className={input} placeholder="Full name" value={p.full_name} onChange={(e) => setP({ ...p, full_name: e.target.value })} />
         <input className={input} placeholder="Phone" value={p.phone} onChange={(e) => setP({ ...p, phone: e.target.value })} />
         <select className={input} value={p.governorate} onChange={(e) => setP({ ...p, governorate: e.target.value })}>
