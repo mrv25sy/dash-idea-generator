@@ -83,7 +83,7 @@ export function CartDrawer() {
           for (const r of rows as any[]) {
             const prev = byId.get(r.order_code);
             const items: string[] = Array.isArray(r.items) ? r.items.map((i: any) => typeof i === "string" ? i : `${i?.name ?? "Item"}${i?.size ? ` (${i.size})` : ""}${i?.qty ? ` ×${i.qty}` : ""}`) : prev?.items ?? [];
-            byId.set(r.order_code, { id: r.order_code, date: prev?.date ?? new Date(r.created_at).toLocaleString(), total: Number(r.total), items, status: normStatus(r.status), token: prev?.token ?? r.token ?? undefined });
+            byId.set(r.order_code, { id: r.order_code, date: prev?.date ?? new Date(r.created_at).toLocaleString(), total: Number(r.total), items, status: normStatus(r.status), token: prev?.token ?? r.access_token ?? undefined });
           }
           const merged = [...byId.values()].sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true }));
           saveHistory(merged);

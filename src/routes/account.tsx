@@ -204,7 +204,7 @@ function Favorites() {
 
 function Profile({ session }: { session: Session }) {
   const uid = session.user.id;
-  const [p, setP] = useState({ username: "", full_name: "", phone: "", governorate: "", address: "", avatar_url: "" });
+  const [p, setP] = useState({ full_name: "", phone: "", governorate: "", address: "", avatar_url: "" });
   const [orders, setOrders] = useState<Order[]>([]);
   const [saved, setSaved] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -218,12 +218,12 @@ function Profile({ session }: { session: Session }) {
     const meta = (u?.user?.user_metadata ?? session.user.user_metadata ?? {}) as Record<string, string | undefined>;
     const pr = (prof ?? {}) as Record<string, string | null | undefined>;
     const pick = (k: string) => pr[k] || meta[k] || "";
-    setP({ username: meta["username"] || "", full_name: pick("full_name"), phone: pick("phone"), governorate: pick("governorate"), address: pick("address"), avatar_url: pick("avatar_url") });
+    setP({ full_name: pick("full_name"), phone: pick("phone"), governorate: pick("governorate"), address: pick("address"), avatar_url: pick("avatar_url") });
     setOrders(ord ?? []);
   };
   useEffect(() => { void load(); }, [uid]);
   const save = async (next = p, quiet = false) => {
-    const clean = { username: next.username.trim(), full_name: next.full_name.trim(), phone: next.phone.trim(), governorate: next.governorate, address: next.address.trim(), avatar_url: next.avatar_url };
+    const clean = { full_name: next.full_name.trim(), phone: next.phone.trim(), governorate: next.governorate, address: next.address.trim(), avatar_url: next.avatar_url };
     const { error: metaErr } = await supabase.auth.updateUser({ data: clean });
     const row = { id: uid, full_name: clean.full_name || null, phone: clean.phone || null, governorate: clean.governorate || null, address: clean.address || null, updated_at: new Date().toISOString() };
     let { error } = await storeClient.from("profiles").upsert({ ...row, avatar_url: clean.avatar_url || null }, { onConflict: "id" });
