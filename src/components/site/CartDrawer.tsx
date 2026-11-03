@@ -273,6 +273,13 @@ export function CartDrawer() {
     void refreshStatuses();
   };
 
+  // Current status of an order; finished ones (Completed/Declined/Canceled) go to History.
+  const statusOf = (o: PastOrder) => {
+    const fromDb = live[o.id];
+    return fromDb === "Archived" ? "Pending" : fromDb ?? (checked ? "Missing" : o.status === "Canceled" ? "Canceled" : "Pending");
+  };
+  const isFinal = (st: string) => ["Completed", "Delivered", "Declined", "Canceled", "Missing"].includes(st);
+
   return (
     <>
       <div onClick={cart.close} className={`fixed inset-0 z-50 bg-background/70 backdrop-blur-sm transition-opacity ${s.open ? "opacity-100" : "pointer-events-none opacity-0"}`} />
@@ -344,7 +351,6 @@ export function CartDrawer() {
               ) : checkedAt ? (
                 <p className="text-[11px] text-muted-foreground">Status checked at {checkedAt}</p>
               ) : null}
-              {(() => null)()}
               <div className="grid grid-cols-2 border border-border text-[11px] font-semibold uppercase tracking-[.2em]">
                 <button onClick={() => setShowHidden(false)} className={`py-2 ${!showHidden ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Active ({history.filter((o) => !isFinal(statusOf(o))).length})</button>
                 <button onClick={() => setShowHidden(true)} className={`py-2 ${showHidden ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>History ({history.filter((o) => isFinal(statusOf(o))).length})</button>
