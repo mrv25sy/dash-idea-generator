@@ -46,14 +46,8 @@ export function CartDrawer() {
   const [history, setHistory] = useState<PastOrder[]>([]);
   const [copied, setCopied] = useState("");
   const [printing, setPrinting] = useState<ReceiptOrder | null>(null);
-  const [hidden, setHidden] = useState<string[]>([]);
+  // false = Active tab, true = History tab (finished orders).
   const [showHidden, setShowHidden] = useState(false);
-  useEffect(() => { try { setHidden(JSON.parse(localStorage.getItem("vice-user-archived-orders") || "[]")); } catch { /* ignore */ } }, []);
-  const toggleHidden = (id: string) => setHidden((h) => {
-    const next = h.includes(id) ? h.filter((x) => x !== id) : [...h, id];
-    localStorage.setItem("vice-user-archived-orders", JSON.stringify(next));
-    return next;
-  });
   const [sentNote, setSentNote] = useState("");
   const [cancelId, setCancelId] = useState("");
   const [receipt, setReceipt] = useState("");
@@ -279,6 +273,13 @@ export function CartDrawer() {
     void refreshStatuses();
   };
 
+  // Current status of an order; finished ones (Completed/Declined/Canceled) go to History.
+  const statusOf = (o: PastOrder) => {
+    const fromDb = live[o.id];
+    return fromDb === "Archived" ? "Pending" : fromDb ?? (checked ? "Missing" : o.status === "Canceled" ? "Canceled" : "Pending");
+  };
+  const isFinal = (st: string) => ["Completed", "Delivered", "Declined", "Canceled", "Missing"].includes(st);
+
   return (
     <>
       <div onClick={cart.close} className={`fixed inset-0 z-50 bg-background/70 backdrop-blur-sm transition-opacity ${s.open ? "opacity-100" : "pointer-events-none opacity-0"}`} />
@@ -351,14 +352,13 @@ export function CartDrawer() {
                 <p className="text-[11px] text-muted-foreground">Status checked at {checkedAt}</p>
               ) : null}
               <div className="grid grid-cols-2 border border-border text-[11px] font-semibold uppercase tracking-[.2em]">
-                <button onClick={() => setShowHidden(false)} className={`py-2 ${!showHidden ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>My orders ({history.filter((o) => !hidden.includes(o.id)).length})</button>
-                <button onClick={() => setShowHidden(true)} className={`py-2 ${showHidden ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Archived ({history.filter((o) => hidden.includes(o.id)).length})</button>
+                <button onClick={() => setShowHidden(false)} className={`py-2 ${!showHidden ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>Active ({history.filter((o) => !isFinal(statusOf(o))).length})</button>
+                <button onClick={() => setShowHidden(true)} className={`py-2 ${showHidden ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}>History ({history.filter((o) => isFinal(statusOf(o))).length})</button>
               </div>
-              {history.filter((o) => hidden.includes(o.id) === showHidden).length === 0 ? <p className="text-sm text-muted-foreground">{showHidden ? "No archived orders. Archive an order to move it here." : "No orders yet."}</p> : (
+              {history.filter((o) => isFinal(statusOf(o)) === showHidden).length === 0 ? <p className="text-sm text-muted-foreground">{showHidden ? "No past orders yet. Completed, declined and canceled orders appear here." : "No active orders right now."}</p> : (
                 <ul className="space-y-3">
-                  {history.filter((o) => hidden.includes(o.id) === showHidden).map((o) => {
-                    const fromDb = live[o.id];
-                    const st = fromDb === "Archived" ? "Pending" : fromDb ?? (checked ? "Missing" : o.status === "Canceled" ? "Canceled" : "Pending");
+                  {history.filter((o) => isFinal(statusOf(o)) === showHidden).map((o) => {
+                    const st = statusOf(o);
                     const canCancel = st === "Pending";
                     return (
                     <li key={o.id + o.date} className="overflow-hidden rounded-xl border border-border bg-card">
@@ -392,7 +392,6 @@ export function CartDrawer() {
                       )}
                       <div className="flex items-center justify-between border-t border-border px-4 py-2.5 text-[11px]">
                         <span className="flex gap-4">
-                          <button onClick={() => toggleHidden(o.id)} className="underline underline-offset-4 opacity-70 hover:opacity-100">{hidden.includes(o.id) ? "Unarchive" : "Archive"}</button>
                           <button onClick={() => setPrinting({ ...o, status: st })} className="inline-flex items-center gap-1.5 font-semibold hover:text-primary"><Receipt size={14} strokeWidth={1.5} /> Receipt</button>
                         </span>
                         {canCancel && cancelId !== o.id && <button onClick={() => setCancelId(o.id)} className="font-semibold text-destructive hover:underline">Cancel order</button>}
