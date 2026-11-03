@@ -335,7 +335,7 @@ export function CartDrawer() {
                 <h3 className="font-display text-sm font-semibold uppercase tracking-[.2em]">Order history</h3>
                 {history.length > 0 && (
                   <button
-                    onClick={() => void refreshStatuses()}
+                    onClick={() => { void syncAccountOrders(); void refreshStatuses(); }}
                     disabled={refreshing}
                     aria-label="Refresh order statuses"
                     className="inline-flex shrink-0 items-center gap-2 border border-border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[.2em] hover:border-primary disabled:opacity-60"
