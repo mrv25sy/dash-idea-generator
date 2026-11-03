@@ -70,31 +70,52 @@ export function CartDrawer() {
   }, []);
   const [promoOpen, setPromoOpen] = useState(false);
 
+  // Signed-in customers see every order saved on their account, from any device.
+  const syncAccountOrders = useCallback(async () => {
+    const { data: sess } = await supabase.auth.getSession();
+    const uid = sess.session?.user.id;
+    if (!uid) return;
+    const { data: rows, error } = await storeClient.from("orders").select("order_code,status,total,created_at,items,access_token").eq("user_id", uid).order("created_at", { ascending: false });
+    if (error || !rows?.length) return;
+    const describe = (i: any): string | null => {
+      if (typeof i === "string") return i;
+      if (!i || i.kind === "receipt") return null;
+      if (i.kind === "coupon") return `COUPON ${i.code} −${money(Number(i.discount) || 0)}`;
+      if (i.kind === "shipping") return `Shipping: ${[i.company, i.branch].filter(Boolean).join(" — ")}`;
+      if (i.kind === "bundle") return `${bundles.find((b) => b.id === i.bundleId)?.name ?? "Bundle"} × ${i.qty ?? 1}`;
+      const pc = Array.isArray(i.pieces) ? i.pieces[0] : null;
+      if (pc) return `${pc.name ?? getProduct(pc.productId)?.name ?? "Item"}${pc.size ? ` (${pc.size})` : ""} × ${i.qty ?? 1}`;
+      return `${i.name ?? "Item"}${i.size ? ` (${i.size})` : ""}${i.qty ? ` × ${i.qty}` : ""}`;
+    };
+    setHistory((local) => {
+      const byId = new Map(local.map((o) => [o.id, o]));
+      for (const r of rows as any[]) {
+        const prev = byId.get(r.order_code);
+        const items = Array.isArray(r.items) ? r.items.map(describe).filter((x: string | null): x is string => !!x) : prev?.items ?? [];
+        byId.set(r.order_code, { id: r.order_code, date: prev?.date ?? r.created_at, total: Number(r.total), items: items.length ? items : prev?.items ?? [], status: normStatus(r.status), token: prev?.token ?? r.access_token ?? undefined });
+      }
+      const merged = [...byId.values()].sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true }));
+      saveHistory(merged);
+      return merged;
+    });
+  }, []);
+
   useEffect(() => {
     loadCatalog().finally(initCart); setForm(loadCustomer()); setHistory(loadHistory());
+    void syncAccountOrders();
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
-      // Signed-in customers see every order saved on their account, from any device.
-      const { data: rows } = await storeClient.from("orders").select("*").eq("user_id", u.user.id).order("created_at", { ascending: false });
-      if (rows?.length) {
-        setHistory((local) => {
-          const byId = new Map(local.map((o) => [o.id, o]));
-          for (const r of rows as any[]) {
-            const prev = byId.get(r.order_code);
-            const items: string[] = Array.isArray(r.items) ? r.items.map((i: any) => typeof i === "string" ? i : `${i?.name ?? "Item"}${i?.size ? ` (${i.size})` : ""}${i?.qty ? ` ×${i.qty}` : ""}`) : prev?.items ?? [];
-            byId.set(r.order_code, { id: r.order_code, date: prev?.date ?? new Date(r.created_at).toLocaleString(), total: Number(r.total), items, status: normStatus(r.status), token: prev?.token ?? r.access_token ?? undefined });
-          }
-          const merged = [...byId.values()].sort((a, b) => b.id.localeCompare(a.id, undefined, { numeric: true }));
-          saveHistory(merged);
-          return merged;
-        });
-      }
       // Address is intentionally never auto-filled — customers type it for every order.
       const { data: p } = await storeClient.from("profiles").select("full_name,phone").eq("id", u.user.id).maybeSingle();
       if (p) setForm((f) => ({ ...f, name: f.name || p.full_name || "", phone: f.phone || p.phone || "" }));
     })();
-  }, []);
+    const { data: sub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") void syncAccountOrders();
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [syncAccountOrders]);
+  useEffect(() => { if (s.open) void syncAccountOrders(); }, [s.open, syncAccountOrders]);
   useEffect(() => { if (!s.open) setStep("cart"); }, [s.open]);
   const [live, setLive] = useState<Record<string, string>>({});
   const [refreshing, setRefreshing] = useState(false);
