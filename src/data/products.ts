@@ -8,7 +8,7 @@ import hoodieScript from "@/assets/p-hoodie-script.jpg";
 import crewBanner from "@/assets/vice-crew-banner.jpg";
 
 /** A color option. Optional photos replace the main photos when picked; optional per-size stock overrides the design's stock. */
-export type Color = { name: string; hex: string; images?: string[]; sizeStock?: Record<string, number>; soldOut?: boolean };
+export type Color = { name: string; hex: string; images?: string[] | undefined; sizeStock?: Record<string, number> | undefined; soldOut?: boolean | undefined };
 export type Product = {
   id: string;
   name: string;
