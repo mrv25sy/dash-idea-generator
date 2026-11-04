@@ -54,8 +54,11 @@ function ProductView() {
   useEffect(() => { loadSizeGuides().then(setGuides).catch(() => setGuides([])); }, []);
   const sizeGuide = guideFor(guides, p.id, p.category);
   const [sizeErr, setSizeErr] = useState(false);
-  const left = stockFor(p, size || undefined);
-  const sizeLeft = (sz: string) => stockFor(p, sz);
+  const left = stockFor(p, size || undefined, color);
+  const sizeLeft = (sz: string) => stockFor(p, sz, color);
+  const colorImgs = p.colors.find((c) => c.name === color)?.images;
+  const images = colorImgs?.length ? colorImgs : p.images;
+  const pickColor = (c: string) => { setColor(c); setImg(0); };
   const maxQty = Math.min(10, left ?? 10);
   const available = p.inStock && !p.comingSoon && left !== 0;
   const soon = !!p.comingSoon;
@@ -67,14 +70,14 @@ function ProductView() {
       <div className="mt-6 grid gap-10 md:grid-cols-2">
         <div>
           <div className="glass relative aspect-[4/5] overflow-hidden border border-border">
-            <img src={p.images[img]} alt={p.name} width={768} height={960} className={`h-full w-full object-cover ${soon ? "scale-110 blur-[10px]" : ""}`} />
+            <img src={images[img] ?? images[0]} alt={p.name} width={768} height={960} className={`h-full w-full object-cover ${soon ? "scale-110 blur-[10px]" : ""}`} />
             {soon && <SoonLock big />}
-            {imageName(p.images[img] ?? "") && <span className="absolute bottom-3 left-3 bg-background/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] backdrop-blur">{imageName(p.images[img] ?? "")}</span>}
+            {imageName(images[img] ?? "") && <span className="absolute bottom-3 left-3 bg-background/80 px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] backdrop-blur">{imageName(images[img] ?? "")}</span>}
             {!available && !soon && <span className="absolute right-3 top-3 bg-primary px-2 py-1 text-[10px] font-semibold uppercase tracking-[.2em] text-primary-foreground">Sold out</span>}
             {onSale(p) && <span className="absolute left-3 top-3 bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-[.2em] text-destructive-foreground">Sale</span>}
           </div>
           <div className="mt-3 flex flex-wrap gap-3">
-            {p.images.map((src, i) => (
+            {images.map((src, i) => (
               <button key={i} onClick={() => setImg(i)} aria-label={imageName(src) || `Image ${i + 1}`} className="flex w-16 flex-col items-center gap-1">
                 <span className={`block h-20 w-16 overflow-hidden border ${i === img ? "border-primary" : "border-border"}`}><img src={src} alt="" className={`h-full w-full object-cover ${soon ? "scale-110 blur-[4px]" : ""}`} /></span>
                 {imageName(src) && <span className="w-full truncate text-center text-[10px] uppercase tracking-wider text-muted-foreground">{imageName(src)}</span>}
@@ -101,7 +104,7 @@ function ProductView() {
             <p className="nav-link mb-3">Color — <span className="text-foreground">{color}</span></p>
             <div className="flex gap-2">
               {p.colors.map((c) => (
-                <button key={c.name} title={c.name} aria-label={c.name} onClick={() => setColor(c.name)} className={`h-9 w-9 rounded-full border-2 ${c.name === color ? "border-primary" : "border-border"}`} style={{ background: c.hex }} />
+                <button key={c.name} title={c.name} aria-label={c.name} onClick={() => pickColor(c.name)} className={`h-9 w-9 rounded-full border-2 ${c.name === color ? "border-primary" : "border-border"} ${c.soldOut ? "opacity-40" : ""}`} style={{ background: c.hex }} />
               ))}
             </div>
           </div>

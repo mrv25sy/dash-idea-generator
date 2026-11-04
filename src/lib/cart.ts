@@ -138,12 +138,12 @@ export function useCart() {
 /** Lines whose requested pieces exceed stock (counted per product+size across the cart). */
 export function stockProblems(lines: CartLine[]): { name: string; size: string; want: number; left: number }[] {
   const want = new Map<string, number>();
-  for (const l of lines) for (const pc of l.pieces) { const k = pc.productId + "|" + pc.size; want.set(k, (want.get(k) ?? 0) + l.qty); }
+  for (const l of lines) for (const pc of l.pieces) { const k = pc.productId + "|" + pc.size + "|" + (pc.color ?? ""); want.set(k, (want.get(k) ?? 0) + l.qty); }
   const out: { name: string; size: string; want: number; left: number }[] = [];
   for (const [k, n] of want) {
-    const [id, size] = k.split("|") as [string, string];
+    const [id, size, color] = k.split("|") as [string, string, string];
     const p = getProduct(id); if (!p) continue;
-    const left = stockFor(p, size);
+    const left = stockFor(p, size, color || undefined);
     if (left != null && n > left) out.push({ name: p.name, size, want: n, left });
   }
   return out;

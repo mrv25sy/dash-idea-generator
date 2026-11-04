@@ -7,7 +7,8 @@ import hoodieMidnight from "@/assets/p-hoodie-midnight.jpg";
 import hoodieScript from "@/assets/p-hoodie-script.jpg";
 import crewBanner from "@/assets/vice-crew-banner.jpg";
 
-export type Color = { name: string; hex: string };
+/** A color option. Optional photos replace the main photos when picked; optional per-size stock overrides the design's stock. */
+export type Color = { name: string; hex: string; images?: string[]; sizeStock?: Record<string, number>; soldOut?: boolean };
 export type Product = {
   id: string;
   name: string;
@@ -32,7 +33,10 @@ export type Product = {
 };
 
 /** Pieces left for a size (or whole product). null = unlimited. */
-export function stockFor(p: Pick<Product, "stock" | "sizeStock">, size?: string): number | null {
+export function stockFor(p: Pick<Product, "stock" | "sizeStock"> & { colors?: Color[] }, size?: string, color?: string): number | null {
+  const c = color ? p.colors?.find((x) => x.name === color) : undefined;
+  if (c?.soldOut) return 0;
+  if (c?.sizeStock && size && typeof c.sizeStock[size] === "number") return c.sizeStock[size]!;
   if (size && p.sizeStock && typeof p.sizeStock[size] === "number") return p.sizeStock[size]!;
   return p.stock ?? null;
 }
@@ -166,7 +170,7 @@ export function loadCatalog(force = false): Promise<void> {
     products.splice(0, products.length, ...pr.data.map((r) => ({
       id: r.id, name: r.name, price: Number(r.price),
       images: (r.images ?? []).map(resolveImage).filter(Boolean),
-      colors: (r.colors as Color[]) ?? [], sizes: r.sizes ?? [],
+      colors: ((r.colors as Color[]) ?? []).map((c) => ({ ...c, images: c.images?.map(resolveImage).filter(Boolean) })), sizes: r.sizes ?? [],
       category: r.category as Product["category"], type: r.type as Product["type"],
       dropName: r.drop_name ?? undefined, inStock: r.in_stock, comingSoon: r.coming_soon, badge: r.badge ?? undefined,
       description: r.description ?? undefined, details: (r.details as { label: string; value: string }[]) ?? [], salePrice: r.sale_price == null ? undefined : Number(r.sale_price),

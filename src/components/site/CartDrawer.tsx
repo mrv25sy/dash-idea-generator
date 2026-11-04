@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { CURRENCY, ORDERING_ENABLED, PHONE_NUMBER } from "@/config";
-import { useStoreSettings } from "@/lib/store-settings";
+import { usePaymentSettings } from "@/lib/store-settings";
 import { Check, CheckCircle2, Clock, Download, HelpCircle, Loader, Receipt, Truck, UploadCloud, X, XCircle, Copy, type LucideIcon } from "lucide-react";
 import { ReceiptPrinter, type ReceiptOrder } from "@/components/site/ReceiptPrinter";
 
@@ -38,7 +38,10 @@ const CARD: Record<string, { tone: string; icon: LucideIcon; text: string }> = {
 
 export function CartDrawer() {
   const s = useCart();
-  const pay = useStoreSettings();
+  const paySet = usePaymentSettings();
+  const [payIdx, setPayIdx] = useState(0);
+  const m0 = paySet.methods[Math.min(payIdx, paySet.methods.length - 1)] ?? paySet.methods[0]!;
+  const pay = { qrUrl: m0.qr, paymentName: m0.name, paymentAddress: m0.address, label: m0.label || "Sham Cash", note: m0.note };
   const [step, setStep] = useState<"cart" | "checkout" | "pay" | "history">("cart");
   const [form, setForm] = useState<Customer>(emptyCustomer);
   const [errors, setErrors] = useState<Partial<Record<keyof Customer | "sizes", string>>>({});
@@ -410,11 +413,19 @@ export function CartDrawer() {
               <div className="rounded-xl border border-border p-5 text-center">
                 <p className="text-[10px] font-semibold uppercase tracking-[.25em] text-muted-foreground">Amount to send</p>
                 <p className="mt-2 font-display text-4xl font-bold">{money(total)}</p>
-                <p className="mt-1 text-xs text-muted-foreground">Send this exact amount via Sham Cash</p>
+                <p className="mt-1 text-xs text-muted-foreground">Send this exact amount via {pay.label}</p>
               </div>
+              {paySet.header && <p className="whitespace-pre-line text-center text-sm text-muted-foreground">{paySet.header}</p>}
+              {paySet.methods.length > 1 && (
+                <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${paySet.methods.length}, minmax(0, 1fr))` }}>
+                  {paySet.methods.map((m, i) => (
+                    <button key={m.id || i} type="button" onClick={() => setPayIdx(i)} className={`h-10 rounded-lg border text-xs font-semibold ${i === payIdx ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>{m.label || `Method ${i + 1}`}</button>
+                  ))}
+                </div>
+              )}
               <div className="rounded-xl border border-border p-4">
                 <div className="flex items-center gap-4">
-                  <img src={pay.qrUrl} alt="Payment QR code" className="w-32 shrink-0 rounded-lg border border-border bg-background p-1" />
+                  {pay.qrUrl && <img src={pay.qrUrl} alt="Payment QR code" className="w-32 shrink-0 rounded-lg border border-border bg-background p-1" />}
                   <div className="min-w-0 flex-1 space-y-3">
                     <div>
                       <p className="text-[10px] uppercase tracking-[.2em] text-muted-foreground">Recipient</p>
@@ -426,6 +437,7 @@ export function CartDrawer() {
                     </div>
                   </div>
                 </div>
+                {pay.note && <p className="mt-3 text-xs text-muted-foreground">{pay.note}</p>}
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   <button
                     onClick={async () => {
@@ -446,7 +458,7 @@ export function CartDrawer() {
                 </div>
               </div>
               <ol className="space-y-3 border-l border-border pl-4 text-sm">
-                {["Save the QR or copy the payment ID", "Send the exact amount in the Sham Cash app", "Upload your payment screenshot below"].map((t, i) => (
+                {["Save the QR or copy the payment ID", `Send the exact amount in the ${pay.label} app`, "Upload your payment screenshot below"].map((t, i) => (
                   <li key={t} className="flex items-center gap-3">
                     <span className="-ml-[29px] grid h-6 w-6 shrink-0 place-items-center rounded-full border border-border bg-background font-mono text-[11px]">{i + 1}</span>
                     {t}
