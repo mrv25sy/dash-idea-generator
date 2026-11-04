@@ -1,3 +1,6 @@
+import { ColorsEditor } from "@/components/admin/ColorsEditor";
+import { PaymentTab } from "@/components/admin/PaymentTab";
+import type { Color } from "@/data/products";
 import { ADMIN_EMAIL } from "@/config";
 import { ORDER_STATUSES, StatusBadge } from "@/lib/order-status";
 import { createFileRoute } from "@tanstack/react-router";
@@ -96,7 +99,7 @@ function Login() {
 type ProductRow = {
   stock?: number | null;
   size_stock?: Record<string, number> | null;
-  id: string; name: string; price: number; images: string[]; colors: { name: string; hex: string }[]; sizes: string[];
+  id: string; name: string; price: number; images: string[]; colors: Color[]; sizes: string[];
   category: string; type: string; drop_name: string | null; in_stock: boolean; coming_soon: boolean; badge: string | null; sort: number;
   description: string | null; details: { label: string; value: string }[]; sale_price: number | null;
 };
@@ -104,7 +107,7 @@ type BundleRow = { id: string; name: string; product_ids: string[]; price: numbe
 type OrderRow = { id: string; order_code: string; name: string; phone: string; governorate: string; address: string; notes: string | null; items: unknown; total: number; status: string; created_at: string };
 
 function Dashboard({ email }: { email: string }) {
-  const [tab, setTab] = useState<"analytics" | "products" | "bundles" | "orders" | "drops" | "sections" | "banners" | "instagram" | "inbox" | "customers" | "coupons" | "sizes">("orders");
+  const [tab, setTab] = useState<"analytics" | "products" | "bundles" | "orders" | "drops" | "sections" | "banners" | "instagram" | "inbox" | "customers" | "coupons" | "sizes" | "payment">("orders");
   const [rk, setRk] = useState(0);
   return (
     <div className="mx-auto w-full max-w-6xl overflow-x-hidden px-4 py-8 sm:px-5 sm:py-12">
@@ -120,13 +123,13 @@ function Dashboard({ email }: { email: string }) {
       <div className="mb-6 sm:hidden">
         <label className={label}>Section</label>
         <select value={tab} onChange={(e) => setTab(e.target.value as typeof tab)} className="h-12 w-full border border-border bg-background px-3 text-sm font-semibold uppercase outline-none focus:border-primary">
-          {(["analytics", "orders", "customers", "coupons", "products", "drops", "bundles", "sections", "banners", "sizes", "instagram", "inbox"] as const).map((t) => (
+          {(["analytics", "orders", "customers", "coupons", "products", "drops", "bundles", "sections", "banners", "sizes", "payment", "instagram", "inbox"] as const).map((t) => (
             <option key={t} value={t}>{t === "products" ? "Designs" : t === "inbox" ? "Messages" : t === "sizes" ? "Size guides" : t.charAt(0).toUpperCase() + t.slice(1)}</option>
           ))}
         </select>
       </div>
       <div className="mb-8 hidden gap-2 overflow-x-auto border-b border-border sm:flex">
-        {(["analytics", "orders", "customers", "coupons", "products", "drops", "bundles", "sections", "banners", "sizes", "instagram", "inbox"] as const).map((t) => (
+        {(["analytics", "orders", "customers", "coupons", "products", "drops", "bundles", "sections", "banners", "sizes", "payment", "instagram", "inbox"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)} className={`nav-link -mb-px whitespace-nowrap border-b-2 px-4 py-3 ${tab === t ? "border-primary text-foreground" : "border-transparent"}`}>{t === "products" ? "Designs" : t === "inbox" ? "Messages" : t === "sizes" ? "Size guides" : t}</button>
         ))}
       </div>
@@ -141,6 +144,7 @@ function Dashboard({ email }: { email: string }) {
       {tab === "inbox" && <BroadcastTab key={rk} />}
       {tab === "coupons" && <CouponsTab key={rk} />}
       {tab === "sizes" && <SizeGuidesTab key={rk} />}
+      {tab === "payment" && <PaymentTab key={rk} />}
       {tab === "customers" && <CustomersTab key={rk} onMessage={(n) => { sessionStorage.setItem("vice-msg-to", "#" + n); setTab("inbox"); }} />}
     </div>
   );
@@ -237,7 +241,6 @@ function CategoryPicker({ value, onChange }: { value: string; onChange: (v: stri
 function ProductForm({ initial, onDone }: { initial: ProductRow; onDone: () => void }) {
   const isNew = !initial.id;
   const [p, setP] = useState(initial);
-  const [colorsText, setColorsText] = useState(initial.colors.map((c) => `${c.name}:${c.hex}`).join(", "));
   const [customSize, setCustomSize] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -265,7 +268,7 @@ function ProductForm({ initial, onDone }: { initial: ProductRow; onDone: () => v
   const save = async () => {
     if (!p.name.trim()) return setErr("Enter a name");
     setBusy(true); setErr("");
-    const colors = colorsText.split(",").map((s) => s.trim()).filter(Boolean).map((s) => { const [name, hex] = s.split(":"); return { name: (name ?? "").trim(), hex: (hex ?? "#000000").trim() }; });
+    const colors = p.colors.filter((c) => c.name.trim()).map((c) => ({ ...c, name: c.name.trim() }));
     const row = { ...p, id: isNew ? slug(p.name) : p.id, colors, price: Number(p.price), drop_name: p.type === "drop" ? p.drop_name || "Night Shift" : null, badge: p.badge || null,
       category: p.category.trim().toLowerCase() || "tee", description: p.description?.trim() || null,
       details: p.details.filter((d) => d.label.trim() && d.value.trim()),
@@ -315,7 +318,7 @@ function ProductForm({ initial, onDone }: { initial: ProductRow; onDone: () => v
             <button type="button" onClick={() => set("details", [...p.details, { label: "", value: "" }])} className="btn btn-ghost h-9 text-[10px]">+ Add detail</button>
           </div>
         </div>
-        <div className="sm:col-span-2"><label className={label}>Colors (Name:#hex, comma separated)</label><input className={input} value={colorsText} onChange={(e) => setColorsText(e.target.value)} /></div>
+        <div className="sm:col-span-2"><label className={label}>Colors</label><ColorsEditor colors={p.colors} sizes={p.sizes} onChange={(c) => set("colors", c)} /></div>
       </div>
       <div className="flex flex-wrap gap-6 text-sm">
         {AVAIL.map((a) => (
