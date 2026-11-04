@@ -98,6 +98,8 @@ function AuthForm() {
   const [pw2, setPw2] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [gender, setGender] = useState<"" | "male" | "female">("");
+  const [upStep, setUpStep] = useState<1 | 2>(1);
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [codeStep, setCodeStep] = useState(false);
@@ -113,10 +115,15 @@ function AuthForm() {
       if (error) setMsg(error.message);
       return;
     }
+    if (upStep === 1) {
+      setBusy(false);
+      if (!name.trim() || phone.replace(/\D/g, "").length < 7 || !gender) return setMsg("Enter your name, phone number and choose male or female.");
+      setUpStep(2); return;
+    }
     if (pw !== pw2) { setBusy(false); return setMsg("Passwords do not match."); }
     const { data, error } = await supabase.auth.signUp({
       email, password: pw,
-      options: { emailRedirectTo: `${window.location.origin}/account`, data: { full_name: name.trim(), phone: phone.trim() } },
+      options: { emailRedirectTo: `${window.location.origin}/account`, data: { full_name: name.trim(), phone: phone.trim(), gender } },
     });
     if (!error && data.session && data.user) await saveProfile(data.user.id);
     setBusy(false);
@@ -141,14 +148,25 @@ function AuthForm() {
   return (
     <form onSubmit={submit} className="space-y-4 border border-border p-6">
       <h1 className="font-display text-3xl font-bold uppercase">{mode === "in" ? "Sign in" : "Create account"}</h1>
-      {mode === "up" && <input className={input} required placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />}
-      {mode === "up" && <input className={input} type="tel" placeholder="Phone (optional)" value={phone} onChange={(e) => setPhone(e.target.value)} />}
-      <input className={input} type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-      <input className={input} type="password" required minLength={6} placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} />
-      {mode === "up" && <input className={input} type="password" required minLength={6} placeholder="Confirm password" value={pw2} onChange={(e) => setPw2(e.target.value)} />}
+      {mode === "up" && upStep === 1 && (<>
+        <p className="text-xs uppercase tracking-[.2em] text-muted-foreground">Step 1 of 2 · About you</p>
+        <input className={input} required placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
+        <input className={input} type="tel" required placeholder="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} />
+        <div className="grid grid-cols-2 gap-2">
+          {(["male", "female"] as const).map((g) => (
+            <button key={g} type="button" onClick={() => setGender(g)} className={`h-11 border text-sm font-semibold uppercase ${gender === g ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>{g === "male" ? "Male" : "Female"}</button>
+          ))}
+        </div>
+      </>)}
+      {(mode === "in" || upStep === 2) && (<>
+        {mode === "up" && <div className="flex items-center justify-between"><p className="text-xs uppercase tracking-[.2em] text-muted-foreground">Step 2 of 2 · Login details</p><button type="button" onClick={() => setUpStep(1)} className="text-xs text-primary underline">Back</button></div>}
+        <input className={input} type="email" required placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <input className={input} type="password" required minLength={6} placeholder="Password" value={pw} onChange={(e) => setPw(e.target.value)} />
+        {mode === "up" && <input className={input} type="password" required minLength={6} placeholder="Confirm password" value={pw2} onChange={(e) => setPw2(e.target.value)} />}
+      </>)}
       {msg && <p className="text-sm text-muted-foreground">{msg}</p>}
-      <button disabled={busy} className="w-full bg-primary py-3 font-semibold uppercase text-primary-foreground disabled:opacity-60">{busy ? "…" : mode === "in" ? "Sign in" : "Sign up"}</button>
-      <button type="button" onClick={() => setMode(mode === "in" ? "up" : "in")} className="w-full text-sm text-primary underline">
+      <button disabled={busy} className="w-full bg-primary py-3 font-semibold uppercase text-primary-foreground disabled:opacity-60">{busy ? "…" : mode === "in" ? "Sign in" : upStep === 1 ? "Next" : "Sign up"}</button>
+      <button type="button" onClick={() => { setMode(mode === "in" ? "up" : "in"); setUpStep(1); setMsg(""); }} className="w-full text-sm text-primary underline">
         {mode === "in" ? "No account? Create one" : "Have an account? Sign in"}
       </button>
     </form>
