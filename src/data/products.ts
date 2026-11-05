@@ -8,7 +8,9 @@ import hoodieScript from "@/assets/p-hoodie-script.jpg";
 import crewBanner from "@/assets/vice-crew-banner.jpg";
 
 /** A color option. Optional photos replace the main photos when picked; optional per-size stock overrides the design's stock. */
-export type Color = { name: string; hex: string; images?: string[] | undefined; sizeStock?: Record<string, number> | undefined; soldOut?: boolean | undefined };
+export type Color = { name: string; hex: string; images?: string[] | undefined; sizeStock?: Record<string, number> | undefined; soldOut?: boolean | undefined; cover?: boolean | undefined };
+/** The color shown on product cards: the one marked as cover, else the first. */
+export const coverColor = (colors: Color[]) => colors.find((c) => c.cover) ?? colors[0];
 export type Product = {
   id: string;
   name: string;

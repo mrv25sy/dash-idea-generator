@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { supabase } from "@/lib/store-client";
-import { resolveImage, type Color } from "@/data/products";
+import { imageName, resolveImage, withImageName, type Color } from "@/data/products";
+
+const ANGLES = ["Front", "Back", "Left", "Right", "Close-up"];
 
 const input = "h-10 w-full border border-border bg-background px-3 text-sm outline-none focus:border-primary";
 
@@ -8,6 +10,15 @@ const input = "h-10 w-full border border-border bg-background px-3 text-sm outli
 export function ColorsEditor({ colors, sizes, onChange }: { colors: Color[]; sizes: string[]; onChange: (c: Color[]) => void }) {
   const [busy, setBusy] = useState(-1);
   const upd = (i: number, patch: Partial<Color>) => onChange(colors.map((c, j) => (j === i ? { ...c, ...patch } : c)));
+  const move = (i: number, d: number) => {
+    const j = i + d;
+    if (j < 0 || j >= colors.length) return;
+    const next = [...colors];
+    [next[i], next[j]] = [next[j]!, next[i]!];
+    onChange(next);
+  };
+  const setCover = (i: number) => onChange(colors.map((c, j) => ({ ...c, cover: j === i ? true : undefined })));
+  const nameImg = (i: number, k: number, name: string) => upd(i, { images: (colors[i]?.images ?? []).map((x, j) => (j === k ? withImageName(x, name) : x)) });
   const upload = async (i: number, files: FileList | null) => {
     if (!files?.length) return;
     setBusy(i);
@@ -29,16 +40,28 @@ export function ColorsEditor({ colors, sizes, onChange }: { colors: Color[]; siz
           <div className="flex items-center gap-2">
             <input type="color" value={c.hex} onChange={(e) => upd(i, { hex: e.target.value })} className="h-10 w-12 shrink-0 cursor-pointer border border-border bg-background" aria-label="Swatch" />
             <input className={input} value={c.name} placeholder="Color name" onChange={(e) => upd(i, { name: e.target.value })} />
+            <label className="flex shrink-0 items-center gap-1 text-xs" title="Photo shown on the product card"><input type="radio" name="cover-color" checked={c.cover ? true : !colors.some((x) => x.cover) && i === 0} onChange={() => setCover(i)} /> Cover</label>
             <label className="flex shrink-0 items-center gap-1 text-xs"><input type="checkbox" checked={!!c.soldOut} onChange={(e) => upd(i, { soldOut: e.target.checked })} /> Sold out</label>
+            <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Move up" className="btn btn-ghost h-10 shrink-0 px-2 disabled:opacity-30">↑</button>
+            <button type="button" onClick={() => move(i, 1)} disabled={i === colors.length - 1} aria-label="Move down" className="btn btn-ghost h-10 shrink-0 px-2 disabled:opacity-30">↓</button>
             <button type="button" onClick={() => onChange(colors.filter((_, j) => j !== i))} className="btn btn-ghost h-10 shrink-0">×</button>
           </div>
           <div>
-            <p className="mb-1 text-xs text-muted-foreground">Photos for this color (shown when the customer picks it; empty = main photos)</p>
+            <p className="mb-1 text-xs text-muted-foreground">Photos for this color (first photo = card photo; tag each angle so customers see Front, Back, Close-up…)</p>
             <div className="flex flex-wrap gap-2">
               {(c.images ?? []).map((src, k) => (
-                <div key={k} className="relative">
-                  <img src={resolveImage(src)} alt="" className="h-20 w-16 object-cover" />
-                  <button type="button" onClick={() => upd(i, { images: c.images!.filter((_, j) => j !== k) })} className="absolute right-0 top-0 bg-primary px-1 text-xs text-primary-foreground">×</button>
+                <div key={k} className="w-28">
+                  <div className="relative">
+                    <img src={resolveImage(src)} alt="" className="h-32 w-28 object-cover" />
+                    <button type="button" onClick={() => upd(i, { images: c.images!.filter((_, j) => j !== k) })} className="absolute right-0 top-0 bg-primary px-1 text-xs text-primary-foreground">×</button>
+                    {k === 0 && <span className="absolute bottom-0 left-0 bg-background/80 px-1 text-[9px] uppercase">Card photo</span>}
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {ANGLES.map((a) => (
+                      <button key={a} type="button" onClick={() => nameImg(i, k, imageName(src) === a ? "" : a)} className={`border px-1 text-[9px] uppercase ${imageName(src) === a ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>{a}</button>
+                    ))}
+                  </div>
+                  <input className="mt-1 h-7 w-full border border-border bg-background px-1 text-[11px] outline-none focus:border-primary" placeholder="Custom name" value={imageName(src)} onChange={(e) => nameImg(i, k, e.target.value)} />
                 </div>
               ))}
               <label className={`btn btn-ghost h-20 cursor-pointer border-dashed text-[10px] ${busy === i ? "pointer-events-none opacity-60" : ""}`}>

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { CURRENCY, INSTAGRAM_URL, ORDERING_ENABLED, PHONE_NUMBER, WHATSAPP_CHANNEL_URL } from "@/config";
 import { cart } from "@/lib/cart";
-import { getProduct, imageName, loadCatalog, LOW_STOCK, onSale, products, stockFor } from "@/data/products";
+import { coverColor, getProduct, imageName, loadCatalog, LOW_STOCK, onSale, products, stockFor } from "@/data/products";
 import { PriceTag, ProductCard, SoonLock } from "@/components/site/Sections";
 import { RatingStars } from "@/components/site/RatingStars";
 import { FavoriteButton } from "@/components/site/FavoriteButton";
@@ -46,7 +46,7 @@ function ProductPage() {
 function ProductView() {
   const { product: p } = Route.useLoaderData();
   const [img, setImg] = useState(0);
-  const [color, setColor] = useState(p.colors[0]?.name);
+  const [color, setColor] = useState(coverColor(p.colors)?.name);
   const [size, setSize] = useState(p.sizes.length === 1 ? p.sizes[0] : "");
   const [qty, setQty] = useState(1);
   const [guide, setGuide] = useState(false);
@@ -104,7 +104,7 @@ function ProductView() {
             <p className="nav-link mb-3">Color — <span className="text-foreground">{color}</span></p>
             <div className="flex gap-2">
               {p.colors.map((c) => (
-                <button key={c.name} title={c.name} aria-label={c.name} onClick={() => pickColor(c.name)} className={`h-9 w-9 rounded-full border-2 ${c.name === color ? "border-primary" : "border-border"} ${c.soldOut ? "opacity-40" : ""}`} style={{ background: c.hex }} />
+                <button key={c.name} title={c.name} aria-label={c.name} onClick={() => pickColor(c.name)} className={`relative grid h-9 w-9 place-items-center rounded-full border border-border ${c.soldOut ? "opacity-40" : ""}`} style={{ background: c.hex }}>{c.name === color && <span className="h-4 w-4 rounded-full border-2 shadow-sm" style={{ borderColor: "#fff" }} />}</button>
               ))}
             </div>
           </div>

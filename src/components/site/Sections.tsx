@@ -2,7 +2,7 @@ import { Link, useLocation } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { cart } from "@/lib/cart";
 import { CURRENCY, DROP_ACTIVE, ORDERING_ENABLED, INSTAGRAM_URL, WHATSAPP_CHANNEL_URL } from "@/config";
-import { instaGallery, visibleDrops, customSections, banners, resolveImage, sectionAnchor, bundles, getProduct, products, sortByCategory, onSale, finalPrice, backImage, type Product, type BannerPlacement, type BannerSize } from "@/data/products";
+import { instaGallery, visibleDrops, customSections, banners, resolveImage, sectionAnchor, bundles, getProduct, products, sortByCategory, onSale, finalPrice, backImage, coverColor, type Product, type BannerPlacement, type BannerSize } from "@/data/products";
 import { DropsCarousel } from "./DropsCarousel";
 import { RatingStars } from "./RatingStars";
 import { FavoriteButton } from "./FavoriteButton";
@@ -54,11 +54,15 @@ export function ProductCard({ p }: { p: Product }) {
   const available = p.inStock && !p.comingSoon;
   const soon = !!p.comingSoon;
   const onHome = useLocation({ select: (l) => l.pathname === "/" });
-  const back = onHome && !soon ? backImage(p.images) : undefined;
+  const [pick, setPick] = useState<string | undefined>(undefined);
+  const shown = p.colors.find((c) => c.name === pick) ?? coverColor(p.colors);
+  const imgs = shown?.images?.length ? shown.images : p.images;
+  const back = !soon && imgs.length > 1 ? backImage(imgs) : undefined;
+  void onHome;
   return (
     <article className="group glass relative flex flex-col border border-border">
       <Link to="/product/$id" params={{ id: p.id }} className="relative block aspect-square sm:aspect-[4/5] overflow-hidden bg-muted">
-        <img src={p.images[0]} alt={p.name} loading="lazy" width={768} height={960} className={`h-full w-full object-cover transition-all duration-700 group-hover:scale-105 ${back ? "group-hover:opacity-0" : ""} ${soon ? "scale-110 blur-[7px]" : ""}`} />
+        <img src={imgs[0]} alt={p.name} loading="lazy" width={768} height={960} className={`h-full w-full object-cover transition-all duration-700 group-hover:scale-105 ${back ? "group-hover:opacity-0" : ""} ${soon ? "scale-110 blur-[7px]" : ""}`} />
         {back && <img src={back} alt={`${p.name} back view`} loading="lazy" width={768} height={960} className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-700 group-hover:opacity-100" />}
         {soon && <SoonLock />}
         <div className="absolute left-3 top-3 flex flex-col items-start gap-1">
@@ -77,7 +81,12 @@ export function ProductCard({ p }: { p: Product }) {
           <FavoriteButton productId={p.id} />
         </div>
         <div className="flex gap-1.5">
-          {p.colors.map((c) => <span key={c.name} title={c.name} className="h-2.5 w-2.5 rounded-full sm:h-3.5 sm:w-3.5 border border-border" style={{ background: c.hex }} />)}
+          {p.colors.map((c) => (
+            <button key={c.name} type="button" title={c.name} aria-label={c.name} onMouseEnter={() => setPick(c.name)} onClick={() => setPick(c.name)}
+              className={`grid h-3.5 w-3.5 place-items-center rounded-full border border-border sm:h-5 sm:w-5 ${c.soldOut ? "opacity-40" : ""}`} style={{ background: c.hex }}>
+              {c.name === shown?.name && p.colors.length > 1 && <span className="h-1.5 w-1.5 rounded-full border sm:h-2.5 sm:w-2.5 sm:border-2" style={{ borderColor: "#fff" }} />}
+            </button>
+          ))}
         </div>
         <div className="mt-auto">
           {available ? (
