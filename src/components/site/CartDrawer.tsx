@@ -97,9 +97,19 @@ export function CartDrawer() {
     });
   }, []);
 
+  // Orders placed while signed out belong to this device only. On sign-in we hand them
+  // to the account (matched by their secret tokens) so they show up on every device.
+  const claimGuestOrders = useCallback(async () => {
+    const { data: sess } = await supabase.auth.getSession();
+    if (!sess.session) return;
+    const tokens = loadHistory().map((o) => o.token).filter(Boolean);
+    if (!tokens.length) return;
+    await (storeClient.rpc as any)("claim_orders", { tokens }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     loadCatalog().finally(initCart); setForm(loadCustomer()); setHistory(loadHistory());
-    void syncAccountOrders();
+    void claimGuestOrders().then(syncAccountOrders);
     (async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
@@ -108,10 +118,10 @@ export function CartDrawer() {
       if (p) setForm((f) => ({ ...f, name: f.name || p.full_name || "", phone: f.phone || p.phone || "" }));
     })();
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN") void syncAccountOrders();
+      if (event === "SIGNED_IN") void claimGuestOrders().then(syncAccountOrders);
     });
     return () => sub.subscription.unsubscribe();
-  }, [syncAccountOrders]);
+  }, [syncAccountOrders, claimGuestOrders]);
   useEffect(() => { if (s.open) void syncAccountOrders(); }, [s.open, syncAccountOrders]);
   useEffect(() => { if (!s.open) setStep("cart"); }, [s.open]);
   const [live, setLive] = useState<Record<string, string>>({});

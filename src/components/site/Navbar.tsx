@@ -1,5 +1,5 @@
 import { ShoppingCart, User } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Logo } from "./Logo";
 import { ThemeToggle } from "./ThemeToggle";
@@ -7,6 +7,7 @@ import { InboxButton } from "./InboxButton";
 import { ORDERING_ENABLED } from "@/config";
 import { cart, cartCount, useCart } from "@/lib/cart";
 import { customSections, sectionAnchor, useCatalogVersion } from "@/data/products";
+import { supabase } from "@/lib/store-client";
 
 type NavItem = { label: string; to: "/shop" | "/"; search?: { filter: string }; hash?: string };
 export const NAV_LINKS: NavItem[] = [
@@ -24,6 +25,13 @@ export function Navbar() {
   const links = useNavLinks();
   const count = cartCount(useCart().lines);
   const isAdmin = useRouterState({ select: (s) => s.location.pathname.startsWith("/admin") });
+  // Green dot on the account icon when signed in, grey when not.
+  const [signedIn, setSignedIn] = useState(false);
+  useEffect(() => {
+    void supabase.auth.getSession().then(({ data }) => setSignedIn(!!data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, sess) => setSignedIn(!!sess));
+    return () => sub.subscription.unsubscribe();
+  }, []);
   return (
     <header className="glass sticky top-0 z-40 border-b border-border">
       <nav className="relative mx-auto flex h-16 max-w-7xl items-center justify-between px-5 md:px-8">
@@ -35,7 +43,10 @@ export function Navbar() {
         </ul>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          {!isAdmin && <Link to="/account" aria-label="My account" className="p-2 text-foreground"><User size={22} strokeWidth={1.6} /></Link>}
+          {!isAdmin && <Link to="/account" aria-label={signedIn ? "My account (signed in)" : "My account (signed out)"} className="relative p-2 text-foreground">
+            <User size={22} strokeWidth={1.6} />
+            <span className={`absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full border border-background ${signedIn ? "bg-success" : "bg-muted-foreground"}`} />
+          </Link>}
           {!isAdmin && <InboxButton />}
           {ORDERING_ENABLED && !isAdmin && <button onClick={cart.open} aria-label={`Cart, ${count} items`} className="relative p-2 text-foreground">
             <ShoppingCart size={22} strokeWidth={1.6} />
