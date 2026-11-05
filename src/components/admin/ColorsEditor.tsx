@@ -17,6 +17,13 @@ export function ColorsEditor({ colors, sizes, onChange }: { colors: Color[]; siz
     [next[i], next[j]] = [next[j]!, next[i]!];
     onChange(next);
   };
+  const moveImg = (i: number, k: number, d: number) => {
+    const imgs = [...(colors[i]?.images ?? [])];
+    const j = k + d;
+    if (j < 0 || j >= imgs.length) return;
+    [imgs[k], imgs[j]] = [imgs[j]!, imgs[k]!];
+    upd(i, { images: imgs });
+  };
   const setCover = (i: number) => onChange(colors.map((c, j) => ({ ...c, cover: j === i ? true : undefined })));
   const nameImg = (i: number, k: number, name: string) => upd(i, { images: (colors[i]?.images ?? []).map((x, j) => (j === k ? withImageName(x, name) : x)) });
   const upload = async (i: number, files: FileList | null) => {
@@ -55,6 +62,10 @@ export function ColorsEditor({ colors, sizes, onChange }: { colors: Color[]; siz
                     <img src={resolveImage(src)} alt="" className="h-32 w-28 object-cover" />
                     <button type="button" onClick={() => upd(i, { images: c.images!.filter((_, j) => j !== k) })} className="absolute right-0 top-0 bg-primary px-1 text-xs text-primary-foreground">×</button>
                     {k === 0 && <span className="absolute bottom-0 left-0 bg-background/80 px-1 text-[9px] uppercase">Card photo</span>}
+                  </div>
+                  <div className="mt-1 flex gap-1">
+                    <button type="button" onClick={() => moveImg(i, k, -1)} disabled={k === 0} aria-label="Move photo left" className="btn btn-ghost h-6 flex-1 px-0 text-xs disabled:opacity-30">←</button>
+                    <button type="button" onClick={() => moveImg(i, k, 1)} disabled={k === (c.images?.length ?? 0) - 1} aria-label="Move photo right" className="btn btn-ghost h-6 flex-1 px-0 text-xs disabled:opacity-30">→</button>
                   </div>
                   <div className="mt-1 flex flex-wrap gap-1">
                     {ANGLES.map((a) => (

@@ -269,7 +269,9 @@ function ProductForm({ initial, onDone }: { initial: ProductRow; onDone: () => v
     if (!p.name.trim()) return setErr("Enter a name");
     setBusy(true); setErr("");
     const colors = p.colors.filter((c) => c.name.trim()).map((c) => ({ ...c, name: c.name.trim() }));
-    const row = { ...p, id: isNew ? slug(p.name) : p.id, colors, price: Number(p.price), drop_name: p.type === "drop" ? p.drop_name || "Night Shift" : null, badge: p.badge || null,
+    const cover = colors.find((c) => c.cover) ?? colors[0];
+    const images = cover?.images?.length ? cover.images : p.images;
+    const row = { ...p, id: isNew ? slug(p.name) : p.id, colors, images, price: Number(p.price), drop_name: p.type === "drop" ? p.drop_name || "Night Shift" : null, badge: p.badge || null,
       category: p.category.trim().toLowerCase() || "tee", description: p.description?.trim() || null,
       details: p.details.filter((d) => d.label.trim() && d.value.trim()),
       sale_price: p.sale_price == null || Number.isNaN(Number(p.sale_price)) || Number(p.sale_price) <= 0 ? null : Number(p.sale_price) };
